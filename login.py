@@ -1,24 +1,13 @@
 import os
 import re
-import secrets
 import logging
-from datetime import datetime, timezone
 from functools import wraps
 
 import requests
 from flask import Flask, request, jsonify, g
 from flask_cors import CORS
 
-
-# ============================================================
-# CONFIGURATION
-# ============================================================
-
 app = Flask(__name__)
-
-# ------------------------------------------------------------
-# Logging
-# ------------------------------------------------------------
 
 logging.basicConfig(
     level=logging.INFO,
@@ -27,46 +16,12 @@ logging.basicConfig(
 
 logger = logging.getLogger(__name__)
 
-
-# ------------------------------------------------------------
-# CORS
-#
-# Set FRONTEND_URL on Render to your actual frontend URL.
-#
-# Example:
-# FRONTEND_URL=https://yourfrontend.com
-#
-# During development you can use:
-# FRONTEND_URL=http://localhost:3000
-# ------------------------------------------------------------
-
-frontend_url = os.getenv("FRONTEND_URL", "*")
-
-CORS(
-    app,
-    resources={
-        r"/api/*": {
-            "origins": frontend_url
-        }
-    },
-    supports_credentials=True
-)
-
-
-# ------------------------------------------------------------
-# Required environment variables
-# ------------------------------------------------------------
-
 SUPABASE_URL = os.getenv("SUPABASE_URL")
 SUPABASE_ANON_KEY = os.getenv("SUPABASE_ANON_KEY")
 SUPABASE_SERVICE_ROLE_KEY = os.getenv("SUPABASE_SERVICE_ROLE_KEY")
-
+FRONTEND_URL = os.getenv("FRONTEND_URL", "*").rstrip("/")
 
 def validate_environment():
-    """
-    Make sure required environment variables exist.
-    """
-
     missing = []
 
     if not SUPABASE_URL:
@@ -84,26 +39,21 @@ def validate_environment():
             + ", ".join(missing)
         )
 
-
 validate_environment()
 
-
-# Remove trailing slash if somebody supplied one.
 SUPABASE_URL = SUPABASE_URL.rstrip("/")
-
-
-# ============================================================
-# SUPABASE ENDPOINTS
-# ============================================================
-
 SUPABASE_AUTH_URL = f"{SUPABASE_URL}/auth/v1"
-
 SUPABASE_REST_URL = f"{SUPABASE_URL}/rest/v1"
 
-
-# ============================================================
-# HTTP SESSION
-# ============================================================
+CORS(
+    app,
+    resources={
+        r"/api/*": {
+            "origins": FRONTEND_URL
+        }
+    },
+    supports_credentials=True
+)
 
 http = requests.Session()
 
@@ -111,26 +61,12 @@ http.headers.update({
     "Accept": "application/json"
 })
 
-
-# ============================================================
-# CONSTANTS
-# ============================================================
-
 MAX_NAME_LENGTH = 100
 MAX_USERNAME_LENGTH = 50
 MAX_EMAIL_LENGTH = 320
 MIN_PASSWORD_LENGTH = 8
 
-
-# ============================================================
-# GENERAL HELPERS
-# ============================================================
-
 def json_error(message, status_code=400, **extra):
-    """
-    Standard JSON error response.
-    """
-
     payload = {
         "success": False,
         "error": message
@@ -140,12 +76,7 @@ def json_error(message, status_code=400, **extra):
 
     return jsonify(payload), status_code
 
-
 def json_success(data=None, status_code=200):
-    """
-    Standard JSON success response.
-    """
-
     payload = {
         "success": True
     }
@@ -155,12 +86,7 @@ def json_success(data=None, status_code=200):
 
     return jsonify(payload), status_code
 
-
 def get_json_body():
-    """
-    Safely obtain JSON request body.
-    """
-
     if not request.is_json:
         return None
 
@@ -169,12 +95,7 @@ def get_json_body():
     except Exception:
         return None
 
-
 def clean_string(value, max_length=None):
-    """
-    Convert a value to a cleaned string.
-    """
-
     if value is None:
         return ""
 
@@ -185,12 +106,7 @@ def clean_string(value, max_length=None):
 
     return value
 
-
 def validate_email(email):
-    """
-    Basic email validation.
-    """
-
     if not email:
         return False
 
@@ -201,34 +117,13 @@ def validate_email(email):
 
     return re.match(pattern, email) is not None
 
-
 def validate_password(password):
-    """
-    Basic password validation.
-
-    Supabase Auth remains responsible for the actual password
-    authentication and password hashing.
-    """
-
     if not password:
         return False
 
-    if len(password) < MIN_PASSWORD_LENGTH:
-        return False
-
-    return True
-
+    return len(password) >= MIN_PASSWORD_LENGTH
 
 def validate_username(username):
-    """
-    Username rules:
-    - 3 to 50 characters
-    - letters
-    - numbers
-    - underscore
-    - period
-    """
-
     if not username:
         return False
 
@@ -243,32 +138,13 @@ def validate_username(username):
         username
     ) is not None
 
-
 def normalize_email(email):
-    """
-    Normalize email before sending to Supabase.
-    """
-
     return email.strip().lower()
 
-
 def normalize_username(username):
-    """
-    Normalize username.
-    """
-
     return username.strip().lower()
 
-
-# ============================================================
-# SUPABASE REQUEST HELPERS
-# ============================================================
-
 def supabase_auth_headers(api_key=None, access_token=None):
-    """
-    Headers for Supabase Auth API.
-    """
-
     if api_key is None:
         api_key = SUPABASE_ANON_KEY
 
@@ -282,14 +158,7 @@ def supabase_auth_headers(api_key=None, access_token=None):
 
     return headers
 
-
 def supabase_database_headers(use_service_role=True, access_token=None):
-    """
-    Headers for Supabase PostgREST.
-
-    The service role key is used only server-side.
-    """
-
     key = (
         SUPABASE_SERVICE_ROLE_KEY
         if use_service_role
@@ -308,20 +177,13 @@ def supabase_database_headers(use_service_role=True, access_token=None):
 
     return headers
 
-
 def extract_supabase_error(response):
-    """
-    Extract a useful error message from Supabase.
-    """
-
     try:
         data = response.json()
     except Exception:
         return "Supabase request failed."
 
     if isinstance(data, dict):
-
-        # Common Supabase Auth errors
         for key in (
             "msg",
             "message",
@@ -335,16 +197,7 @@ def extract_supabase_error(response):
 
     return "Supabase request failed."
 
-
-# ============================================================
-# AUTHENTICATION FUNCTIONS
-# ============================================================
-
 def supabase_signup(email, password, user_metadata):
-    """
-    Create a Supabase Auth user.
-    """
-
     url = f"{SUPABASE_AUTH_URL}/signup"
 
     payload = {
@@ -352,6 +205,9 @@ def supabase_signup(email, password, user_metadata):
         "password": password,
         "data": user_metadata
     }
+
+    if FRONTEND_URL and FRONTEND_URL != "*":
+        payload["redirect_to"] = FRONTEND_URL
 
     try:
         response = http.post(
@@ -361,12 +217,14 @@ def supabase_signup(email, password, user_metadata):
             timeout=15
         )
     except requests.RequestException as exc:
-        logger.error("Supabase signup connection error: %s", exc)
+        logger.error(
+            "Supabase signup connection error: %s",
+            exc
+        )
 
         return None, "Unable to connect to authentication service."
 
     if response.status_code not in (200, 201):
-
         error = extract_supabase_error(response)
 
         logger.warning(
@@ -381,12 +239,7 @@ def supabase_signup(email, password, user_metadata):
     except Exception:
         return None, "Invalid response from authentication service."
 
-
 def supabase_login(email, password):
-    """
-    Authenticate a user with Supabase Auth.
-    """
-
     url = f"{SUPABASE_AUTH_URL}/token"
 
     params = {
@@ -406,14 +259,15 @@ def supabase_login(email, password):
             json=payload,
             timeout=15
         )
-
     except requests.RequestException as exc:
-        logger.error("Supabase login connection error: %s", exc)
+        logger.error(
+            "Supabase login connection error: %s",
+            exc
+        )
 
         return None, "Unable to connect to authentication service."
 
     if response.status_code != 200:
-
         error = extract_supabase_error(response)
 
         logger.warning(
@@ -428,12 +282,7 @@ def supabase_login(email, password):
     except Exception:
         return None, "Invalid response from authentication service."
 
-
 def supabase_get_user(access_token):
-    """
-    Verify the access token and retrieve the authenticated user.
-    """
-
     url = f"{SUPABASE_AUTH_URL}/user"
 
     try:
@@ -444,9 +293,11 @@ def supabase_get_user(access_token):
             ),
             timeout=15
         )
-
     except requests.RequestException as exc:
-        logger.error("Supabase user verification error: %s", exc)
+        logger.error(
+            "Supabase user verification error: %s",
+            exc
+        )
 
         return None, "Unable to verify authentication."
 
@@ -458,12 +309,7 @@ def supabase_get_user(access_token):
     except Exception:
         return None, "Invalid authentication response."
 
-
 def supabase_logout(access_token):
-    """
-    Invalidate the user's current Supabase session.
-    """
-
     url = f"{SUPABASE_AUTH_URL}/logout"
 
     try:
@@ -474,9 +320,11 @@ def supabase_logout(access_token):
             ),
             timeout=15
         )
-
     except requests.RequestException as exc:
-        logger.error("Supabase logout error: %s", exc)
+        logger.error(
+            "Supabase logout error: %s",
+            exc
+        )
 
         return False, "Unable to contact authentication service."
 
@@ -485,28 +333,7 @@ def supabase_logout(access_token):
 
     return True, None
 
-
-# ============================================================
-# DATABASE FUNCTIONS
-# ============================================================
-
 def create_profile(user_id, email, full_name, username):
-    """
-    Create the application's profile row.
-
-    IMPORTANT:
-    The database should contain a table called `profiles`.
-
-    Recommended columns:
-
-        id          uuid primary key
-        email       text
-        full_name   text
-        username    text unique
-        created_at  timestamptz
-        updated_at  timestamptz
-    """
-
     url = f"{SUPABASE_REST_URL}/profiles"
 
     payload = {
@@ -525,18 +352,20 @@ def create_profile(user_id, email, full_name, username):
             json=payload,
             timeout=15
         )
-
     except requests.RequestException as exc:
-        logger.error("Profile database connection error: %s", exc)
+        logger.error(
+            "Profile database connection error: %s",
+            exc
+        )
 
         return None, "Unable to save user profile."
 
     if response.status_code not in (200, 201):
-
         error = extract_supabase_error(response)
 
         logger.error(
-            "Failed to create profile: %s",
+            "PROFILE CREATION FAILED | user_id=%s | error=%s",
+            user_id,
             error
         )
 
@@ -549,16 +378,10 @@ def create_profile(user_id, email, full_name, username):
             return data[0], None
 
         return data, None
-
     except Exception:
         return None, "Invalid database response."
 
-
 def get_profile(user_id):
-    """
-    Retrieve the user's profile.
-    """
-
     url = f"{SUPABASE_REST_URL}/profiles"
 
     params = {
@@ -575,14 +398,24 @@ def get_profile(user_id):
             ),
             timeout=15
         )
-
     except requests.RequestException as exc:
-        logger.error("Profile lookup error: %s", exc)
+        logger.error(
+            "Profile lookup error: %s",
+            exc
+        )
 
         return None, "Unable to retrieve profile."
 
     if response.status_code != 200:
-        return None, extract_supabase_error(response)
+        error = extract_supabase_error(response)
+
+        logger.error(
+            "PROFILE LOOKUP FAILED | user_id=%s | error=%s",
+            user_id,
+            error
+        )
+
+        return None, error
 
     try:
         data = response.json()
@@ -591,16 +424,10 @@ def get_profile(user_id):
             return None, None
 
         return data[0], None
-
     except Exception:
         return None, "Invalid database response."
 
-
 def check_username_exists(username):
-    """
-    Check whether username already exists.
-    """
-
     url = f"{SUPABASE_REST_URL}/profiles"
 
     params = {
@@ -617,71 +444,39 @@ def check_username_exists(username):
             ),
             timeout=15
         )
-
     except requests.RequestException as exc:
-        logger.error("Username lookup error: %s", exc)
+        logger.error(
+            "Username lookup error: %s",
+            exc
+        )
 
         return None, "Unable to check username."
 
     if response.status_code != 200:
-        return None, extract_supabase_error(response)
+        error = extract_supabase_error(response)
+
+        logger.error(
+            "USERNAME LOOKUP FAILED | username=%s | error=%s",
+            username,
+            error
+        )
+
+        return None, error
 
     try:
         data = response.json()
 
         return len(data) > 0, None
-
     except Exception:
         return None, "Invalid database response."
 
-
-def delete_profile(user_id):
-    """
-    Delete profile if account creation succeeded but
-    profile creation failed.
-
-    This helps prevent partially-created accounts.
-    """
-
-    url = f"{SUPABASE_REST_URL}/profiles"
-
-    params = {
-        "id": f"eq.{user_id}"
-    }
-
-    try:
-        response = http.delete(
-            url,
-            params=params,
-            headers=supabase_database_headers(
-                use_service_role=True
-            ),
-            timeout=15
-        )
-
-        return response.status_code in (200, 204)
-
-    except requests.RequestException:
-        return False
-
-
-# ============================================================
-# AUTH DECORATOR
-# ============================================================
-
 def require_authentication(function):
-    """
-    Protect an endpoint using a Supabase access token.
-
-    Frontend sends:
-
-        Authorization: Bearer <access_token>
-    """
-
     @wraps(function)
     def decorated(*args, **kwargs):
-
-        authorization = request.headers.get("Authorization", "")
+        authorization = request.headers.get(
+            "Authorization",
+            ""
+        )
 
         if not authorization:
             return json_error(
@@ -703,16 +498,16 @@ def require_authentication(function):
                 401
             )
 
-        user, error = supabase_get_user(access_token)
+        user, error = supabase_get_user(
+            access_token
+        )
 
         if error or not user:
-
             return json_error(
                 "Invalid or expired authentication token.",
                 401
             )
 
-        # Store authenticated user for the route.
         g.user = user
         g.access_token = access_token
 
@@ -720,43 +515,23 @@ def require_authentication(function):
 
     return decorated
 
-
-# ============================================================
-# HEALTH CHECK
-# ============================================================
-
 @app.route("/", methods=["GET"])
 def home():
-    """
-    Basic health check.
-    """
-
     return jsonify({
         "success": True,
         "service": "Authentication API",
         "status": "running"
     })
 
-
 @app.route("/api/health", methods=["GET"])
 def health():
-    """
-    API health endpoint.
-    """
-
     return jsonify({
         "success": True,
         "status": "healthy"
     })
 
-
-# ============================================================
-# SIGNUP
-# ============================================================
-
 @app.route("/api/auth/signup", methods=["POST"])
 def signup():
-
     data = get_json_body()
 
     if not data:
@@ -783,19 +558,11 @@ def signup():
         )
     )
 
-    # --------------------------------------------------------
-    # Validate email
-    # --------------------------------------------------------
-
     if not validate_email(email):
         return json_error(
             "Please provide a valid email address.",
             400
         )
-
-    # --------------------------------------------------------
-    # Validate password
-    # --------------------------------------------------------
 
     if not validate_password(password):
         return json_error(
@@ -803,19 +570,11 @@ def signup():
             400
         )
 
-    # --------------------------------------------------------
-    # Validate full name
-    # --------------------------------------------------------
-
     if not full_name:
         return json_error(
             "Full name is required.",
             400
         )
-
-    # --------------------------------------------------------
-    # Validate username
-    # --------------------------------------------------------
 
     if not validate_username(username):
         return json_error(
@@ -823,10 +582,6 @@ def signup():
             "letters, numbers, underscores or periods.",
             400
         )
-
-    # --------------------------------------------------------
-    # Check username availability
-    # --------------------------------------------------------
 
     username_exists, username_error = check_username_exists(
         username
@@ -844,21 +599,6 @@ def signup():
             409
         )
 
-    # --------------------------------------------------------
-    # Check if profile already exists before auth creation (Pre-check)
-    # --------------------------------------------------------
-
-    profile_check, profile_check_error = get_profile_by_email(email)
-
-    # If a profile already exists for this email, we can handle it cleanly or let Supabase catch it.
-    # But more importantly, if an orphaned Auth account exists without a profile, we should handle or link it.
-    # To fully resolve the profile creation failure state where Supabase auth exists but profile does not:
-    # We can check if the user exists in Supabase Auth or handle profile upsert/recovery.
-
-    # --------------------------------------------------------
-    # Create Supabase Auth user
-    # --------------------------------------------------------
-
     user_metadata = {
         "full_name": full_name,
         "username": username
@@ -871,8 +611,6 @@ def signup():
     )
 
     if auth_error:
-
-        # Avoid leaking unnecessary authentication details.
         lower_error = auth_error.lower()
 
         if (
@@ -890,15 +628,17 @@ def signup():
             400
         )
 
-    # --------------------------------------------------------
-    # Extract Supabase user
-    # --------------------------------------------------------
+    if not auth_data:
+        return json_error(
+            "Account creation failed.",
+            500
+        )
 
     user = auth_data.get("user")
 
     if not user:
         return json_error(
-            "Account creation failed.",
+            "Account creation failed: Supabase returned no user.",
             500
         )
 
@@ -910,10 +650,6 @@ def signup():
             500
         )
 
-    # --------------------------------------------------------
-    # Create profile in database
-    # --------------------------------------------------------
-
     profile, profile_error = create_profile(
         user_id=user_id,
         email=email,
@@ -922,7 +658,6 @@ def signup():
     )
 
     if profile_error:
-
         logger.error(
             "PROFILE CREATION FAILED | user_id=%s | error=%s",
             user_id,
@@ -934,19 +669,9 @@ def signup():
             500
         )
 
-    # --------------------------------------------------------
-    # Determine whether Supabase returned a session.
-    #
-    # If email confirmation is disabled, Supabase normally
-    # returns access/refresh tokens immediately.
-    #
-    # If email confirmation is enabled, session may be null.
-    # --------------------------------------------------------
-
     session = auth_data.get("session")
 
     response_data = {
-        "message": "Account created successfully.",
         "user": {
             "id": user_id,
             "email": email,
@@ -956,6 +681,9 @@ def signup():
     }
 
     if session:
+        response_data["message"] = (
+            "Account created and authenticated successfully."
+        )
 
         response_data["session"] = {
             "access_token": session.get("access_token"),
@@ -964,21 +692,17 @@ def signup():
             "expires_at": session.get("expires_at"),
             "token_type": session.get("token_type")
         }
-
-        response_data["message"] = (
-            "Account created and authenticated successfully."
-        )
-
     else:
-
         response_data["message"] = (
             "Account created successfully. "
             "Please verify your email before logging in."
         )
 
     logger.info(
-        "New user registered: %s",
-        user_id
+        "New user registered: user_id=%s email=%s username=%s",
+        user_id,
+        email,
+        username
     )
 
     return json_success(
@@ -986,14 +710,8 @@ def signup():
         201
     )
 
-
-# ============================================================
-# LOGIN
-# ============================================================
-
 @app.route("/api/auth/login", methods=["POST"])
 def login():
-
     data = get_json_body()
 
     if not data:
@@ -1020,10 +738,6 @@ def login():
             400
         )
 
-    # --------------------------------------------------------
-    # Authenticate against Supabase Auth
-    # --------------------------------------------------------
-
     auth_data, auth_error = supabase_login(
         email,
         password
@@ -1041,48 +755,58 @@ def login():
             401
         )
 
-    user = auth_data.get("user")
-    session = auth_data.get("session")
-
-    if not user or not session:
+    if not auth_data:
         return json_error(
             "Login was unsuccessful.",
             401
         )
 
+    user = auth_data.get("user")
+    session = auth_data.get("session")
+
+    if not user or not session:
+        return json_error(
+            "Login was unsuccessful. No authentication session was returned.",
+            401
+        )
+
     user_id = user.get("id")
 
-    # --------------------------------------------------------
-    # Retrieve application profile
-    # --------------------------------------------------------
-
-    profile, profile_error = get_profile(user_id)
+    profile, profile_error = get_profile(
+        user_id
+    )
 
     if profile_error:
+        logger.error(
+            "PROFILE RETRIEVAL FAILED | user_id=%s | error=%s",
+            user_id,
+            profile_error
+        )
+
         return json_error(
             "Unable to retrieve user profile.",
             500
         )
 
-    # --------------------------------------------------------
-    # Return session to frontend
-    # --------------------------------------------------------
+    if not profile:
+        logger.error(
+            "PROFILE NOT FOUND | user_id=%s | email=%s",
+            user_id,
+            email
+        )
+
+        return json_error(
+            "Authentication succeeded, but the user profile was not found.",
+            500
+        )
 
     response_data = {
         "message": "Login successful.",
         "user": {
             "id": user.get("id"),
             "email": user.get("email"),
-            "full_name": (
-                profile.get("full_name")
-                if profile
-                else user.get("user_metadata", {}).get("full_name")
-            ),
-            "username": (
-                profile.get("username")
-                if profile
-                else user.get("user_metadata", {}).get("username")
-            )
+            "full_name": profile.get("full_name"),
+            "username": profile.get("username")
         },
         "session": {
             "access_token": session.get("access_token"),
@@ -1103,20 +827,15 @@ def login():
         200
     )
 
-
-# ============================================================
-# CURRENT USER
-# ============================================================
-
 @app.route("/api/auth/me", methods=["GET"])
 @require_authentication
 def current_user():
-
     user = g.user
-
     user_id = user.get("id")
 
-    profile, profile_error = get_profile(user_id)
+    profile, profile_error = get_profile(
+        user_id
+    )
 
     if profile_error:
         return json_error(
@@ -1143,15 +862,9 @@ def current_user():
         "profile": profile
     })
 
-
-# ============================================================
-# LOGOUT
-# ============================================================
-
 @app.route("/api/auth/logout", methods=["POST"])
 @require_authentication
 def logout():
-
     access_token = g.access_token
 
     success, error = supabase_logout(
@@ -1159,6 +872,11 @@ def logout():
     )
 
     if not success:
+        logger.error(
+            "Logout failed: %s",
+            error
+        )
+
         return json_error(
             "Logout failed.",
             500
@@ -1168,14 +886,8 @@ def logout():
         "message": "Logged out successfully."
     })
 
-
-# ============================================================
-# FORGOT PASSWORD
-# ============================================================
-
 @app.route("/api/auth/forgot-password", methods=["POST"])
 def forgot_password():
-
     data = get_json_body()
 
     if not data:
@@ -1194,27 +906,23 @@ def forgot_password():
             400
         )
 
-    # --------------------------------------------------------
-    # Supabase password recovery endpoint
-    # --------------------------------------------------------
-
     url = f"{SUPABASE_AUTH_URL}/recover"
 
     payload = {
         "email": email
     }
 
-    try:
+    if FRONTEND_URL and FRONTEND_URL != "*":
+        payload["redirect_to"] = FRONTEND_URL
 
+    try:
         response = http.post(
             url,
             headers=supabase_auth_headers(),
             json=payload,
             timeout=15
         )
-
     except requests.RequestException as exc:
-
         logger.error(
             "Password recovery connection error: %s",
             exc
@@ -1226,19 +934,10 @@ def forgot_password():
         )
 
     if response.status_code not in (200, 201, 204):
-
         logger.warning(
             "Password recovery request failed: %s",
             extract_supabase_error(response)
         )
-
-        # Don't reveal whether an email exists.
-        return json_success({
-            "message": (
-                "If an account exists for this email, "
-                "a password reset email will be sent."
-            )
-        })
 
     return json_success({
         "message": (
@@ -1247,14 +946,8 @@ def forgot_password():
         )
     })
 
-
-# ============================================================
-# REFRESH SESSION
-# ============================================================
-
 @app.route("/api/auth/refresh", methods=["POST"])
 def refresh_session():
-
     data = get_json_body()
 
     if not data:
@@ -1284,7 +977,6 @@ def refresh_session():
     }
 
     try:
-
         response = http.post(
             url,
             params=params,
@@ -1292,9 +984,7 @@ def refresh_session():
             json=payload,
             timeout=15
         )
-
     except requests.RequestException as exc:
-
         logger.error(
             "Token refresh connection error: %s",
             exc
@@ -1306,18 +996,21 @@ def refresh_session():
         )
 
     if response.status_code != 200:
+        error = extract_supabase_error(response)
+
+        logger.warning(
+            "Token refresh failed: %s",
+            error
+        )
 
         return json_error(
-            "Invalid or expired refresh token.",
+            error,
             401
         )
 
     try:
-
         session = response.json()
-
     except Exception:
-
         return json_error(
             "Invalid response from authentication service.",
             500
@@ -1333,3 +1026,55 @@ def refresh_session():
             "token_type": session.get("token_type")
         }
     })
+
+@app.errorhandler(400)
+def bad_request(error):
+    return json_error(
+        "Bad request.",
+        400
+    )
+
+@app.errorhandler(404)
+def not_found(error):
+    return json_error(
+        "Endpoint not found.",
+        404
+    )
+
+@app.errorhandler(405)
+def method_not_allowed(error):
+    return json_error(
+        "HTTP method not allowed.",
+        405
+    )
+
+@app.errorhandler(500)
+def internal_server_error(error):
+    logger.exception(
+        "Unhandled server error: %s",
+        error
+    )
+
+    return json_error(
+        "Internal server error.",
+        500
+    )
+
+if __name__ == "__main__":
+    port = int(
+        os.getenv("PORT", "5000")
+    )
+
+    host = "0.0.0.0"
+
+    logger.info(
+        "Starting authentication API on %s:%s",
+        host,
+        port
+    )
+
+    app.run(
+        host=host,
+        port=port,
+        debug=False
+    )
