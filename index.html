@@ -3,23 +3,23 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="theme-color" content="#1e293b">
+  <meta name="theme-color" content="#ffffff">
   <title>ABN Technologies | Secure Login</title>
   <meta name="description" content="Secure account access for ABN Technologies.">
   <style>
     :root {
-      --bg: #1e293b;
-      --panel: rgba(30, 41, 59, .88);
-      --panel-2: #334155;
-      --text: #f5f7fb;
-      --muted: #9ba8bd;
-      --border: rgba(255,255,255,.10);
+      --bg: #ffffff;
+      --panel: rgba(255, 255, 255, .94);
+      --panel-2: #ffffff;
+      --text: #101827;
+      --muted: #647086;
+      --border: rgba(16, 24, 39, .10);
       --accent: #6c63ff;
-      --accent-2: #8b84ff;
+      --accent-2: #6c63ff;
       --success: #25c991;
       --danger: #ff5d73;
-      --input: rgba(255,255,255,.055);
-      --shadow: 0 30px 80px rgba(0,0,0,.38);
+      --input: #f5f7fb;
+      --shadow: 0 30px 70px rgba(32, 45, 70, .16);
     }
 
     * { box-sizing: border-box; }
@@ -30,23 +30,27 @@
       font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
       color: var(--text);
       background:
-        radial-gradient(circle at 15% 15%, rgba(108,99,255,.22), transparent 32%),
-        radial-gradient(circle at 85% 80%, rgba(0,180,255,.12), transparent 28%),
+        radial-gradient(circle at 15% 15%, rgba(108,99,255,.12), transparent 32%),
+        radial-gradient(circle at 85% 80%, rgba(0,180,255,.08), transparent 28%),
         var(--bg);
       display: grid;
       place-items: center;
       padding: 28px 16px;
     }
 
-    body.light {
-      --bg: #f5f7fb;
-      --panel: rgba(255,255,255,.94);
-      --panel-2: #fff;
-      --text: #101827;
-      --muted: #647086;
-      --border: rgba(16,24,39,.10);
-      --input: #f5f7fb;
-      --shadow: 0 30px 70px rgba(32,45,70,.16);
+    body.dark {
+      --bg: #07101f;
+      --panel: rgba(15, 25, 45, .88);
+      --panel-2: #101b31;
+      --text: #f5f7fb;
+      --muted: #9ba8bd;
+      --border: rgba(255,255,255,.10);
+      --accent: #6c63ff;
+      --accent-2: #8b84ff;
+      --success: #25c991;
+      --danger: #ff5d73;
+      --input: rgba(255,255,255,.055);
+      --shadow: 0 30px 80px rgba(0,0,0,.38);
     }
 
     .shell {
@@ -68,8 +72,8 @@
       flex-direction: column;
       justify-content: space-between;
       background:
-        linear-gradient(145deg, rgba(108,99,255,.20), transparent 55%),
-        rgba(255,255,255,.02);
+        linear-gradient(145deg, rgba(108,99,255,.10), transparent 55%),
+        rgba(0,0,0,.01);
       border-right: 1px solid var(--border);
     }
 
@@ -91,7 +95,7 @@
       background: linear-gradient(135deg, var(--accent), #35b9ff);
       color: white;
       font-weight: 900;
-      box-shadow: 0 12px 30px rgba(108,99,255,.32);
+      box-shadow: 0 12px 30px rgba(108,99,255,.22);
     }
 
     .brand h1 {
@@ -125,7 +129,7 @@
       padding: 8px 12px;
       color: var(--muted);
       font-size: 12px;
-      background: rgba(255,255,255,.035);
+      background: rgba(0,0,0,.02);
     }
 
     .copyright {
@@ -325,13 +329,13 @@
     .message.error {
       background: rgba(255,93,115,.10);
       border: 1px solid rgba(255,93,115,.25);
-      color: #ff9aaa;
+      color: #d93850;
     }
 
     .message.success {
       background: rgba(37,201,145,.10);
       border: 1px solid rgba(37,201,145,.25);
-      color: #66e3b5;
+      color: #15805d;
     }
 
     .fine-print {
@@ -576,17 +580,6 @@
   </main>
 
   <script>
-    /*
-      ============================================================
-      ABN Technologies Authentication Frontend
-      ============================================================
-
-      IMPORTANT:
-      Change this to your actual Render backend URL after deployment.
-
-      Example:
-      const API_BASE_URL = "https://abn-auth-backend.onrender.com";
-    */
     const API_BASE_URL = "https://YOUR-RENDER-BACKEND.onrender.com";
 
     const loginTab = document.getElementById("loginTab");
@@ -627,7 +620,6 @@
     loginTab.addEventListener("click", () => setMode("login"));
     signupTab.addEventListener("click", () => setMode("signup"));
 
-    // Password visibility
     document.querySelectorAll(".password-toggle").forEach(button => {
       button.addEventListener("click", () => {
         const input = document.getElementById(button.dataset.target);
@@ -638,7 +630,6 @@
       });
     });
 
-    // Password strength indicator
     const signupPassword = document.getElementById("signupPassword");
     const strength = document.getElementById("strength");
     const strengthBar = strength.querySelector("span");
@@ -664,7 +655,6 @@
       strengthBar.style.width = widths[Math.max(0, score - 1)];
     });
 
-    // Login
     loginForm.addEventListener("submit", async (event) => {
       event.preventDefault();
       clearMessage();
@@ -696,14 +686,6 @@
           throw new Error(data.error || "Login failed. Please try again.");
         }
 
-        /*
-          Store the session.
-
-          For a higher-security production implementation, move session
-          management to HttpOnly Secure cookies on the Flask backend.
-          This frontend is compatible with the backend we previously created,
-          which currently returns the Supabase session in JSON.
-        */
         if (data.session) {
           localStorage.setItem("abn_access_token", data.session.access_token || "");
           localStorage.setItem("abn_refresh_token", data.session.refresh_token || "");
@@ -715,11 +697,6 @@
 
         showMessage("Login successful. Redirecting...", "success");
 
-        /*
-          Change this to your actual post-login page.
-          Example:
-          window.location.href = "/dashboard.html";
-        */
         setTimeout(() => {
           window.location.href = "/dashboard.html";
         }, 700);
@@ -732,7 +709,6 @@
       }
     });
 
-    // Signup
     signupForm.addEventListener("submit", async (event) => {
       event.preventDefault();
       clearMessage();
@@ -809,11 +785,6 @@
 
         showMessage(data.message || "Account created successfully.", "success");
 
-        /*
-          If Supabase email confirmation is enabled, the backend may not
-          return a session. In that case, keep the user on this page and
-          tell them to verify their email.
-        */
         if (data.session) {
           setTimeout(() => {
             window.location.href = "/dashboard.html";
@@ -828,7 +799,6 @@
       }
     });
 
-    // Forgot password
     document.getElementById("forgotBtn").addEventListener("click", async () => {
       const email = document.getElementById("loginEmail").value.trim().toLowerCase();
 
@@ -869,27 +839,26 @@
       }
     });
 
-    // Theme
     const themeBtn = document.getElementById("themeBtn");
 
     function updateThemeButton() {
-      themeBtn.textContent = document.body.classList.contains("light") ? "☀" : "☾";
+      themeBtn.textContent = document.body.classList.contains("dark") ? "☀" : "☾";
     }
 
     const savedTheme = localStorage.getItem("abn_theme");
 
-    if (savedTheme === "light") {
-      document.body.classList.add("light");
+    if (savedTheme === "dark") {
+      document.body.classList.add("dark");
     }
 
     updateThemeButton();
 
     themeBtn.addEventListener("click", () => {
-      document.body.classList.toggle("light");
+      document.body.classList.toggle("dark");
 
       localStorage.setItem(
         "abn_theme",
-        document.body.classList.contains("light") ? "light" : "dark"
+        document.body.classList.contains("dark") ? "dark" : "light"
       );
 
       updateThemeButton();
