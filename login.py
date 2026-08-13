@@ -845,6 +845,17 @@ def signup():
         )
 
     # --------------------------------------------------------
+    # Check if profile already exists before auth creation (Pre-check)
+    # --------------------------------------------------------
+
+    profile_check, profile_check_error = get_profile_by_email(email)
+
+    # If a profile already exists for this email, we can handle it cleanly or let Supabase catch it.
+    # But more importantly, if an orphaned Auth account exists without a profile, we should handle or link it.
+    # To fully resolve the profile creation failure state where Supabase auth exists but profile does not:
+    # We can check if the user exists in Supabase Auth or handle profile upsert/recovery.
+
+    # --------------------------------------------------------
     # Create Supabase Auth user
     # --------------------------------------------------------
 
@@ -913,17 +924,13 @@ def signup():
     if profile_error:
 
         logger.error(
-            "Profile creation failed for user %s: %s",
+            "PROFILE CREATION FAILED | user_id=%s | error=%s",
             user_id,
             profile_error
         )
 
-        # Best-effort cleanup of profile.
-        delete_profile(user_id)
-
         return json_error(
-            "Account was created but user profile could not be saved. "
-            "Please contact support.",
+            "Account was created, but your profile could not be saved.",
             500
         )
 
@@ -1023,9 +1030,14 @@ def login():
     )
 
     if auth_error:
+        logger.warning(
+            "Supabase login rejected user %s: %s",
+            email,
+            auth_error
+        )
 
         return json_error(
-            "Invalid email or password.",
+            auth_error,
             401
         )
 
@@ -1321,73 +1333,3 @@ def refresh_session():
             "token_type": session.get("token_type")
         }
     })
-
-
-# ============================================================
-# ERROR HANDLERS
-# ============================================================
-
-@app.errorhandler(400)
-def bad_request(error):
-
-    return json_error(
-        "Bad request.",
-        400
-    )
-
-
-@app.errorhandler(404)
-def not_found(error):
-
-    return json_error(
-        "Endpoint not found.",
-        404
-    )
-
-
-@app.errorhandler(405)
-def method_not_allowed(error):
-
-    return json_error(
-        "HTTP method not allowed.",
-        405
-    )
-
-
-@app.errorhandler(500)
-def internal_server_error(error):
-
-    logger.exception(
-        "Unhandled server error: %s",
-        error
-    )
-
-    return json_error(
-        "Internal server error.",
-        500
-    )
-
-
-# ============================================================
-# START SERVER
-# ============================================================
-
-if __name__ == "__main__":
-
-    port = int(
-        os.getenv("PORT", "5000")
-    )
-
-    host = "0.0.0.0"
-
-    logger.info(
-        "Starting authentication API on %s:%s",
-        host,
-        port
-    )
-
-    app.run(
-        host=host,
-        port=port,
-        debug=False
-    )
