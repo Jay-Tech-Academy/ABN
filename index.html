@@ -834,892 +834,174 @@
 
 
   <script>
-
-    // ========================================================
-    // CONFIGURATION
-    // ========================================================
-
-    const API_BASE_URL =
-      "https://abn-ulmz.onrender.com";
-
-
-    // ========================================================
-    // DOM
-    // ========================================================
-
-    const loginTab =
-      document.getElementById("loginTab");
-
-    const signupTab =
-      document.getElementById("signupTab");
-
-    const loginForm =
-      document.getElementById("loginForm");
-
-    const signupForm =
-      document.getElementById("signupForm");
-
-    const heading =
-      document.getElementById("heading");
-
-    const subtitle =
-      document.getElementById("subtitle");
-
-    const message =
-      document.getElementById("message");
-
-
-    // ========================================================
-    // MESSAGES
-    // ========================================================
-
-    function showMessage(
-      text,
-      type = "error"
-    ) {
-      message.textContent = text;
-
-      message.className =
-        `message show ${type}`;
-    }
-
-
-    function clearMessage() {
-      message.textContent = "";
-      message.className = "message";
-    }
-
-
-    // ========================================================
-    // MODE
-    // ========================================================
-
-    function setMode(mode) {
-
-      clearMessage();
-
-      const login =
-        mode === "login";
-
-      loginTab.classList.toggle(
-        "active",
-        login
-      );
-
-      signupTab.classList.toggle(
-        "active",
-        !login
-      );
-
-      loginForm.classList.toggle(
-        "active",
-        login
-      );
-
-      signupForm.classList.toggle(
-        "active",
-        !login
-      );
-
-      heading.textContent =
-        login
-          ? "Welcome back"
-          : "Create your account";
-
-      subtitle.textContent =
-        login
-          ? "Sign in to continue to your account."
-          : "Join ABN Technologies and create your secure account.";
-    }
-
-
-    loginTab.addEventListener(
-      "click",
-      () => setMode("login")
-    );
-
-
-    signupTab.addEventListener(
-      "click",
-      () => setMode("signup")
-    );
-
-
-    // ========================================================
-    // PASSWORD TOGGLE
-    // ========================================================
-
-    document
-      .querySelectorAll(".password-toggle")
-      .forEach(button => {
-
-        button.addEventListener(
-          "click",
-          () => {
-
-            const input =
-              document.getElementById(
-                button.dataset.target
-              );
-
-            const visible =
-              input.type === "text";
-
-            input.type =
-              visible
-                ? "password"
-                : "text";
-
-            button.textContent =
-              visible
-                ? "Show"
-                : "Hide";
-          }
-        );
-      });
-
-
-    // ========================================================
-    // PASSWORD STRENGTH
-    // ========================================================
-
-    const signupPassword =
-      document.getElementById(
-        "signupPassword"
-      );
-
-    const strength =
-      document.getElementById(
-        "strength"
-      );
-
-    const strengthBar =
-      strength.querySelector("span");
-
-
-    signupPassword.addEventListener(
-      "input",
-      () => {
-
-        const value =
-          signupPassword.value;
-
-        if (!value) {
-
-          strength.style.display =
-            "none";
-
-          return;
-        }
-
-        strength.style.display =
-          "block";
-
-        let score = 0;
-
-        if (value.length >= 8)
-          score++;
-
-        if (/[A-Z]/.test(value))
-          score++;
-
-        if (/[a-z]/.test(value))
-          score++;
-
-        if (/[0-9]/.test(value))
-          score++;
-
-        if (/[^A-Za-z0-9]/.test(value))
-          score++;
-
-        const widths = [
-          "20%",
-          "35%",
-          "55%",
-          "75%",
-          "100%"
-        ];
-
-        strengthBar.style.width =
-          widths[
-            Math.max(0, score - 1)
-          ];
-      }
-    );
-
-
-    // ========================================================
-    // LOGIN
-    // ========================================================
-
-    loginForm.addEventListener(
-      "submit",
-      async event => {
-
-        event.preventDefault();
-
-        clearMessage();
-
-        const email =
-          document
-            .getElementById("loginEmail")
-            .value
-            .trim()
-            .toLowerCase();
-
-        const password =
-          document
-            .getElementById("loginPassword")
-            .value;
-
-        const button =
-          document.getElementById(
-            "loginSubmit"
-          );
-
-
-        if (
-          !email ||
-          !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)
-        ) {
-
-          showMessage(
-            "Please enter a valid email address."
-          );
-
-          return;
-        }
-
-
-        if (!password) {
-
-          showMessage(
-            "Please enter your password."
-          );
-
-          return;
-        }
-
-
-        button.disabled = true;
-        button.textContent =
-          "Signing in...";
-
-
-        try {
-
-          const response =
-            await fetch(
-              `${API_BASE_URL}/api/auth/login`,
-              {
-                method: "POST",
-
-                headers: {
-                  "Content-Type":
-                    "application/json"
-                },
-
-                body: JSON.stringify({
-                  email,
-                  password
-                })
-              }
-            );
-
-
-          const data =
-            await response
-              .json()
-              .catch(() => ({}));
-
-
-          // --------------------------------------------------
-          // UNVERIFIED ACCOUNT
-          // --------------------------------------------------
-
-          if (
-            data.verification_required
-          ) {
-
-            showMessage(
-              data.error ||
-              "Please check your email and click the authentication link to verify your account before signing in.",
-              "verification"
-            );
-
-            return;
-          }
-
-
-          if (
-            !response.ok ||
-            !data.success
-          ) {
-
-            throw new Error(
-              data.error ||
-              "Login failed. Please try again."
-            );
-          }
-
-
-          // --------------------------------------------------
-          // SESSION
-          // --------------------------------------------------
-
-          if (data.session) {
-
-            if (
-              data.session.access_token
-            ) {
-
-              localStorage.setItem(
-                "abn_access_token",
-                data.session.access_token
-              );
-            }
-
-            if (
-              data.session.refresh_token
-            ) {
-
-              localStorage.setItem(
-                "abn_refresh_token",
-                data.session.refresh_token
-              );
-            }
-          }
-
-
-          if (data.user) {
-
-            localStorage.setItem(
-              "abn_user",
-              JSON.stringify(data.user)
-            );
-          }
-
-
-          showMessage(
-            "Login successful. Redirecting...",
-            "success"
-          );
-
-
-          setTimeout(
-            () => {
-              window.location.href =
-                "/dashboard.html";
-            },
-            700
-          );
-
-        }
-
-        catch (error) {
-
-          showMessage(
-            error.message ||
-            "Login failed. Please try again."
-          );
-
-        }
-
-        finally {
-
-          button.disabled = false;
-
-          button.textContent =
-            "Sign in";
-        }
-      }
-    );
-
-
-    // ========================================================
-    // SIGNUP
-    // ========================================================
-
-    signupForm.addEventListener(
-      "submit",
-      async event => {
-
-        event.preventDefault();
-
-        clearMessage();
-
-
-        const full_name =
-          document
-            .getElementById("fullName")
-            .value
-            .trim();
-
-        const username =
-          document
-            .getElementById("username")
-            .value
-            .trim()
-            .toLowerCase();
-
-        const email =
-          document
-            .getElementById("signupEmail")
-            .value
-            .trim()
-            .toLowerCase();
-
-        const password =
-          document
-            .getElementById("signupPassword")
-            .value;
-
-        const confirmPassword =
-          document
-            .getElementById("confirmPassword")
-            .value;
-
-        const terms =
-          document
-            .getElementById("terms")
-            .checked;
-
-        const button =
-          document.getElementById(
-            "signupSubmit"
-          );
-
-
-        // ----------------------------------------------------
-        // VALIDATION
-        // ----------------------------------------------------
-
-        if (!full_name) {
-
-          showMessage(
-            "Please enter your full name."
-          );
-
-          return;
-        }
-
-
-        if (
-          !/^[a-zA-Z0-9_.]{3,50}$/.test(
-            username
-          )
-        ) {
-
-          showMessage(
-            "Username must be 3-50 characters and use only letters, numbers, underscores or periods."
-          );
-
-          return;
-        }
-
-
-        if (
-          !email ||
-          !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(
-            email
-          )
-        ) {
-
-          showMessage(
-            "Please enter a valid email address."
-          );
-
-          return;
-        }
-
-
-        if (password.length < 8) {
-
-          showMessage(
-            "Password must be at least 8 characters."
-          );
-
-          return;
-        }
-
-
-        if (
-          password !== confirmPassword
-        ) {
-
-          showMessage(
-            "Passwords do not match."
-          );
-
-          return;
-        }
-
-
-        if (!terms) {
-
-          showMessage(
-            "Please accept the terms to create an account."
-          );
-
-          return;
-        }
-
-
-        button.disabled = true;
-
-        button.textContent =
-          "Creating account...";
-
-
-        try {
-
-          const response =
-            await fetch(
-              `${API_BASE_URL}/api/auth/signup`,
-              {
-                method: "POST",
-
-                headers: {
-                  "Content-Type":
-                    "application/json"
-                },
-
-                body: JSON.stringify({
-                  email,
-                  password,
-                  full_name,
-                  username
-                })
-              }
-            );
-
-
-          const data =
-            await response
-              .json()
-              .catch(() => ({}));
-
-
-          // --------------------------------------------------
-          // EMAIL VERIFICATION REQUIRED
-          //
-          // This is a SUCCESSFUL signup.
-          // Do not treat it as an error.
-          // --------------------------------------------------
-
-          if (
-            data.success &&
-            data.verification_required
-          ) {
-
-            showMessage(
-              data.message ||
-              "Your account has been created. Please check your email for the authentication link to verify your account.",
-              "verification"
-            );
-
-            // Make the next action obvious.
-            //
-            // We keep the signup form visible so the user can
-            // see the message, but we do not redirect them to
-            // the dashboard because they have no session yet.
-
-            button.disabled = false;
-
-            button.textContent =
-              "Create account";
-
-            return;
-          }
-
-
-          // --------------------------------------------------
-          // OTHER API ERRORS
-          // --------------------------------------------------
-
-          if (
-            !response.ok ||
-            !data.success
-          ) {
-
-            throw new Error(
-              data.error ||
-              "Signup failed. Please try again."
-            );
-          }
-
-
-          // --------------------------------------------------
-          // IMMEDIATE SESSION
-          //
-          // Only possible when email confirmation is disabled.
-          // --------------------------------------------------
-
-          if (data.session) {
-
-            if (
-              data.session.access_token
-            ) {
-
-              localStorage.setItem(
-                "abn_access_token",
-                data.session.access_token
-              );
-            }
-
-            if (
-              data.session.refresh_token
-            ) {
-
-              localStorage.setItem(
-                "abn_refresh_token",
-                data.session.refresh_token
-              );
-            }
-          }
-
-
-          if (data.user) {
-
-            localStorage.setItem(
-              "abn_user",
-              JSON.stringify(data.user)
-            );
-          }
-
-
-          // --------------------------------------------------
-          // IMMEDIATE AUTHENTICATION
-          // --------------------------------------------------
-
-         if (
-  data.session &&
-  data.session.access_token
-) {
-  showMessage(
-    "Account created successfully. Redirecting...",
-    "success"
-  );
-
-  setTimeout(
-    () => {
-      window.location.href =
-        "https://www.abnwebtech.online/";
-    },
-    700
-  );
-
-  return;
+const API_BASE_URL="https://abn-ulmz.onrender.com";
+
+const loginTab=document.getElementById("loginTab");
+const signupTab=document.getElementById("signupTab");
+const loginForm=document.getElementById("loginForm");
+const signupForm=document.getElementById("signupForm");
+const heading=document.getElementById("heading");
+const subtitle=document.getElementById("subtitle");
+const message=document.getElementById("message");
+
+function showMessage(text,type="error"){
+  message.textContent=text;
+  message.className=`message show ${type}`;
 }
 
+function clearMessage(){
+  message.textContent="";
+  message.className="message";
+}
 
-          // --------------------------------------------------
-          // FALLBACK:
-          // Successful account creation without a session.
-          // --------------------------------------------------
+function setMode(mode){
+  clearMessage();
+  const login=mode==="login";
+  loginTab.classList.toggle("active",login);
+  signupTab.classList.toggle("active",!login);
+  loginForm.classList.toggle("active",login);
+  signupForm.classList.toggle("active",!login);
+  heading.textContent=login?"Welcome back":"Create your account";
+  subtitle.textContent=login
+    ?"Sign in to continue to your account."
+    :"Join ABN Technologies and create your secure account.";
+}
 
-          showMessage(
-            data.message ||
-            "Account created successfully. Please check your email for the authentication link.",
-            "verification"
-          );
+loginTab.addEventListener("click",()=>setMode("login"));
+signupTab.addEventListener("click",()=>setMode("signup"));
 
-        }
+document.querySelectorAll(".password-toggle").forEach(button=>{
+  button.addEventListener("click",()=>{
+    const input=document.getElementById(button.dataset.target);
+    const visible=input.type==="text";
+    input.type=visible?"password":"text";
+    button.textContent=visible?"Show":"Hide";
+  });
+});
 
-        catch (error) {
+const signupPassword=document.getElementById("signupPassword");
+const strength=document.getElementById("strength");
+const strengthBar=strength.querySelector("span");
 
-          showMessage(
-            error.message ||
-            "Signup failed. Please try again."
-          );
+signupPassword.addEventListener("input",()=>{
+  const value=signupPassword.value;
 
-        }
+  if(!value){
+    strength.style.display="none";
+    return;
+  }
 
-        finally {
+  strength.style.display="block";
 
-          // Don't leave the button permanently disabled
-          // after a verification-required response.
-          button.disabled = false;
+  let score=0;
 
-          button.textContent =
-            "Create account";
-        }
+  if(value.length>=8)score++;
+  if(/[A-Z]/.test(value))score++;
+  if(/[a-z]/.test(value))score++;
+  if(/[0-9]/.test(value))score++;
+  if(/[^A-Za-z0-9]/.test(value))score++;
 
-      }
-    );
+  const widths=["20%","35%","55%","75%","100%"];
 
+  strengthBar.style.width=widths[Math.max(0,score-1)];
+});
 
-    // ========================================================
-    // FORGOT PASSWORD
-    // ========================================================
+loginForm.addEventListener("submit",async event=>{
+  event.preventDefault();
+  clearMessage();
 
-    document
-      .getElementById("forgotBtn")
-      .addEventListener(
-        "click",
-        async () => {
+  const email=document.getElementById("loginEmail").value.trim().toLowerCase();
+  const password=document.getElementById("loginPassword").value;
+  const button=document.getElementById("loginSubmit");
 
-          const email =
-            document
-              .getElementById("loginEmail")
-              .value
-              .trim()
-              .toLowerCase();
+  if(!email||!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)){
+    showMessage("Please enter a valid email address.");
+    return;
+  }
 
+  if(!password){
+    showMessage("Please enter your password.");
+    return;
+  }
 
-          if (
-            !email ||
-            !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)
-          ) {
+  button.disabled=true;
+  button.textContent="Signing in...";
 
-            showMessage(
-              "Enter your email address first, then click Forgot password."
-            );
+  try{
+    const response=await fetch(`${API_BASE_URL}/api/auth/login`,{
+      method:"POST",
+      headers:{
+        "Content-Type":"application/json"
+      },
+      body:JSON.stringify({
+        email,
+        password
+      })
+    });
 
-            return;
-          }
+    const data=await response.json().catch(()=>({}));
 
-
-          const button =
-            document.getElementById(
-              "forgotBtn"
-            );
-
-          button.disabled = true;
-
-          button.textContent =
-            "Sending...";
-
-
-          try {
-
-            const response =
-              await fetch(
-                `${API_BASE_URL}/api/auth/forgot-password`,
-                {
-                  method: "POST",
-
-                  headers: {
-                    "Content-Type":
-                      "application/json"
-                  },
-
-                  body: JSON.stringify({
-                    email
-                  })
-                }
-              );
-
-
-            const data =
-              await response
-                .json()
-                .catch(() => ({}));
-
-
-            if (
-              !response.ok ||
-              !data.success
-            ) {
-
-              throw new Error(
-                data.error ||
-                "Unable to process password recovery."
-              );
-            }
-
-
-            showMessage(
-              data.message ||
-              "If the account exists, a reset email will be sent.",
-              "success"
-            );
-
-          }
-
-          catch (error) {
-
-            showMessage(
-              error.message
-            );
-
-          }
-
-          finally {
-
-            button.disabled = false;
-
-            button.textContent =
-              "Forgot password?";
-          }
-        }
+    if(data.verification_required){
+      showMessage(
+        data.error||
+        "Please check your email and click the authentication link to verify your account before signing in.",
+        "verification"
       );
-
-
-    // ========================================================
-    // THEME
-    // ========================================================
-
-    const themeBtn =
-      document.getElementById(
-        "themeBtn"
-      );
-
-
-    function updateThemeButton() {
-
-      themeBtn.textContent =
-        document.body.classList.contains(
-          "dark"
-        )
-          ? "☀"
-          : "☾";
+      return;
     }
 
-
-    const savedTheme =
-      localStorage.getItem(
-        "abn_theme"
-      );
-
-
-    if (
-      savedTheme === "dark"
-    ) {
-
-      document.body.classList.add(
-        "dark"
+    if(!response.ok||!data.success){
+      throw new Error(
+        data.error||
+        "Login failed. Please try again."
       );
     }
 
+    if(!data.session||!data.session.access_token){
+      throw new Error(
+        "Login succeeded but no authentication session was returned."
+      );
+    }
 
-    updateThemeButton();
-
-
-    themeBtn.addEventListener(
-      "click",
-      () => {
-
-        document.body.classList.toggle(
-          "dark"
-        );
-
-
-        localStorage.setItem(
-          "abn_theme",
-          document.body.classList.contains(
-            "dark"
-          )
-            ? "dark"
-            : "light"
-        );
-
-
-        updateThemeButton();
-      }
+    localStorage.setItem(
+      "abn_access_token",
+      data.session.access_token
     );
 
-  </script>
+    if(data.session.refresh_token){
+      localStorage.setItem(
+        "abn_refresh_token",
+        data.session.refresh_token
+      );
+    }
+
+    if(data.user){
+      localStorage.setItem(
+        "abn_user",
+        JSON.stringify(data.user)
+      );
+    }
+
+    showMessage(
+      "Login successful. Redirecting...",
+      "success"
+    );
+
+    setTimeout(()=>{
+      window.location.href="https://abn-kappa.vercel.app";
+    },700);
+
+  }catch(error){
+    showMessage(
+      error.message||
+      "Login failed. Please try again."
+    );
+  }finally{
+    button.disabled=false;
+    button.textContent="Sign in";
+  }
+});
+</script>
 
 </body>
 </html>
