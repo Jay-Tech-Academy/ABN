@@ -19,7 +19,7 @@ logger = logging.getLogger(__name__)
 SUPABASE_URL = os.getenv("SUPABASE_URL")
 SUPABASE_ANON_KEY = os.getenv("SUPABASE_ANON_KEY")
 SUPABASE_SERVICE_ROLE_KEY = os.getenv("SUPABASE_SERVICE_ROLE_KEY")
-FRONTEND_URL = os.getenv("FRONTEND_URL", "*").rstrip("/")
+FRONTEND_URL = os.getenv("FRONTEND_URL", "").strip().rstrip("/")
 
 def validate_environment():
     missing = []
@@ -49,7 +49,11 @@ CORS(
     app,
     resources={
         r"/api/*": {
-            "origins": FRONTEND_URL
+            "origins": (
+                [FRONTEND_URL]
+                if FRONTEND_URL
+                else "*"
+            )
         }
     },
     supports_credentials=True
@@ -71,9 +75,7 @@ def json_error(message, status_code=400, **extra):
         "success": False,
         "error": message
     }
-
     payload.update(extra)
-
     return jsonify(payload), status_code
 
 def json_success(data=None, status_code=200):
@@ -113,9 +115,10 @@ def validate_email(email):
     if len(email) > MAX_EMAIL_LENGTH:
         return False
 
-    pattern = r"^[^@\s]+@[^@\s]+\.[^@\s]+$"
-
-    return re.match(pattern, email) is not None
+    return re.match(
+        r"^[^@\s]+@[^@\s]+\.[^@\s]+$",
+        email
+    ) is not None
 
 def validate_password(password):
     if not password:
@@ -158,44 +161,81 @@ def supabase_auth_headers(api_key=None, access_token=None):
 
     return headers
 
-def supabase_database_headers(use_service_role=True, access_token=None):
-    key = (
-        SUPABASE_SERVICE_ROLE_KEY
-        if use_service_role
-        else SUPABASE_ANON_KEY
-    )
+def supabase_service_headers():
+    return {
+        "apikey": SUPABASE_SERVICE_ROLE_KEY,
+        "Authorization": f"Bearer {SUPABASE_SERVICE_ROLE_KEY}",
+        "Content-Type": "application/json"
+    }
 
-    headers = {
-        "apikey": key,
-        "Authorization": f"Bearer {key}",
+def supabase_database_headers():
+    return {
+        "apikey": SUPABASE_SERVICE_ROLE_KEY,
+        "Authorization": f"Bearer {SUPABASE_SERVICE_ROLE_KEY}",
         "Content-Type": "application/json",
         "Prefer": "return=representation"
     }
-
-    if access_token:
-        headers["Authorization"] = f"Bearer {access_token}"
-
-    return headers
 
 def extract_supabase_error(response):
     try:
         data = response.json()
     except Exception:
-        return "Supabase request failed."
+        return f"Supabase request failed with HTTP {response.status_code}."
 
     if isinstance(data, dict):
         for key in (
             "msg",
             "message",
             "error_description",
-            "error"
+            "error",
+            "error_code"
         ):
             value = data.get(key)
 
             if value:
                 return str(value)
 
-    return "Supabase request failed."
+    return f"Supabase request failed with HTTP {response.status_code}."
+
+def extract_session(data):
+    """
+    Normalize Supabase Auth responses.
+
+    Supabase Auth REST responses return access_token,
+    refresh_token, expires_in, expires_at and token_type
+    at the top level.
+
+    This function converts those fields into the session
+    structure expected by our API.
+    """
+
+    if not isinstance(data, dict):
+        return None
+
+    existing_session = data.get("session")
+
+    if isinstance(existing_session, dict):
+        if existing_session.get("access_token"):
+            return {
+                "access_token": existing_session.get("access_token"),
+                "refresh_token": existing_session.get("refresh_token"),
+                "expires_in": existing_session.get("expires_in"),
+                "expires_at": existing_session.get("expires_at"),
+                "token_type": existing_session.get("token_type")
+            }
+
+    access_token = data.get("access_token")
+
+    if not access_token:
+        return None
+
+    return {
+        "access_token": access_token,
+        "refresh_token": data.get("refresh_token"),
+        "expires_in": data.get("expires_in"),
+        "expires_at": data.get("expires_at"),
+        "token_type": data.get("token_type")
+    }
 
 def supabase_signup(email, password, user_metadata):
     url = f"{SUPABASE_AUTH_URL}/signup"
@@ -206,7 +246,7 @@ def supabase_signup(email, password, user_metadata):
         "data": user_metadata
     }
 
-    if FRONTEND_URL and FRONTEND_URL != "*":
+    if FRONTEND_URL:
         payload["redirect_to"] = FRONTEND_URL
 
     try:
@@ -214,30 +254,36 @@ def supabase_signup(email, password, user_metadata):
             url,
             headers=supabase_auth_headers(),
             json=payload,
-            timeout=15
+            timeout=20
         )
     except requests.RequestException as exc:
         logger.error(
-            "Supabase signup connection error: %s",
+            "SUPABASE SIGNUP CONNECTION ERROR | error=%s",
             exc
         )
-
         return None, "Unable to connect to authentication service."
 
     if response.status_code not in (200, 201):
         error = extract_supabase_error(response)
 
         logger.warning(
-            "Supabase signup failed: %s",
+            "SUPABASE SIGNUP FAILED | status=%s | error=%s",
+            response.status_code,
             error
         )
 
         return None, error
 
     try:
-        return response.json(), None
+        data = response.json()
     except Exception:
+        logger.error(
+            "SUPABASE SIGNUP INVALID JSON | status=%s",
+            response.status_code
+        )
         return None, "Invalid response from authentication service."
+
+    return data, None
 
 def supabase_login(email, password):
     url = f"{SUPABASE_AUTH_URL}/token"
@@ -257,30 +303,48 @@ def supabase_login(email, password):
             params=params,
             headers=supabase_auth_headers(),
             json=payload,
-            timeout=15
+            timeout=20
         )
     except requests.RequestException as exc:
         logger.error(
-            "Supabase login connection error: %s",
+            "SUPABASE LOGIN CONNECTION ERROR | error=%s",
             exc
         )
-
         return None, "Unable to connect to authentication service."
 
     if response.status_code != 200:
         error = extract_supabase_error(response)
 
         logger.warning(
-            "Supabase login failed: %s",
+            "SUPABASE LOGIN REJECTED | status=%s | error=%s",
+            response.status_code,
             error
         )
 
         return None, error
 
     try:
-        return response.json(), None
+        data = response.json()
     except Exception:
+        logger.error(
+            "SUPABASE LOGIN INVALID JSON | status=%s",
+            response.status_code
+        )
         return None, "Invalid response from authentication service."
+
+    session = extract_session(data)
+
+    if session:
+        data["session"] = session
+
+    logger.info(
+        "SUPABASE LOGIN SUCCESS | email=%s | user_id=%s | session=%s",
+        email,
+        data.get("user", {}).get("id"),
+        bool(session)
+    )
+
+    return data, None
 
 def supabase_get_user(access_token):
     url = f"{SUPABASE_AUTH_URL}/user"
@@ -291,18 +355,25 @@ def supabase_get_user(access_token):
             headers=supabase_auth_headers(
                 access_token=access_token
             ),
-            timeout=15
+            timeout=20
         )
     except requests.RequestException as exc:
         logger.error(
-            "Supabase user verification error: %s",
+            "SUPABASE USER VERIFICATION ERROR | error=%s",
             exc
         )
-
         return None, "Unable to verify authentication."
 
     if response.status_code != 200:
-        return None, extract_supabase_error(response)
+        error = extract_supabase_error(response)
+
+        logger.warning(
+            "SUPABASE USER VERIFICATION FAILED | status=%s | error=%s",
+            response.status_code,
+            error
+        )
+
+        return None, error
 
     try:
         return response.json(), None
@@ -318,18 +389,70 @@ def supabase_logout(access_token):
             headers=supabase_auth_headers(
                 access_token=access_token
             ),
-            timeout=15
+            timeout=20
         )
     except requests.RequestException as exc:
         logger.error(
-            "Supabase logout error: %s",
+            "SUPABASE LOGOUT ERROR | error=%s",
             exc
         )
-
         return False, "Unable to contact authentication service."
 
     if response.status_code not in (200, 204):
-        return False, extract_supabase_error(response)
+        error = extract_supabase_error(response)
+
+        logger.warning(
+            "SUPABASE LOGOUT FAILED | status=%s | error=%s",
+            response.status_code,
+            error
+        )
+
+        return False, error
+
+    return True, None
+
+def delete_auth_user(user_id):
+    """
+    Permanently remove the Supabase Auth user.
+
+    This is a server-side admin operation and therefore
+    uses the service-role key.
+
+    It is used only as rollback when profile creation fails.
+    """
+
+    url = f"{SUPABASE_AUTH_URL}/admin/users/{user_id}"
+
+    try:
+        response = http.delete(
+            url,
+            headers=supabase_service_headers(),
+            timeout=20
+        )
+    except requests.RequestException as exc:
+        logger.error(
+            "AUTH USER ROLLBACK CONNECTION ERROR | user_id=%s | error=%s",
+            user_id,
+            exc
+        )
+        return False, "Unable to contact authentication service."
+
+    if response.status_code not in (200, 204):
+        error = extract_supabase_error(response)
+
+        logger.error(
+            "AUTH USER ROLLBACK FAILED | user_id=%s | status=%s | error=%s",
+            user_id,
+            response.status_code,
+            error
+        )
+
+        return False, error
+
+    logger.info(
+        "AUTH USER ROLLBACK SUCCESSFUL | user_id=%s",
+        user_id
+    )
 
     return True, None
 
@@ -346,26 +469,25 @@ def create_profile(user_id, email, full_name, username):
     try:
         response = http.post(
             url,
-            headers=supabase_database_headers(
-                use_service_role=True
-            ),
+            headers=supabase_database_headers(),
             json=payload,
-            timeout=15
+            timeout=20
         )
     except requests.RequestException as exc:
         logger.error(
-            "Profile database connection error: %s",
+            "PROFILE DATABASE CONNECTION ERROR | user_id=%s | error=%s",
+            user_id,
             exc
         )
-
         return None, "Unable to save user profile."
 
     if response.status_code not in (200, 201):
         error = extract_supabase_error(response)
 
         logger.error(
-            "PROFILE CREATION FAILED | user_id=%s | error=%s",
+            "PROFILE CREATION FAILED | user_id=%s | status=%s | error=%s",
             user_id,
+            response.status_code,
             error
         )
 
@@ -373,13 +495,22 @@ def create_profile(user_id, email, full_name, username):
 
     try:
         data = response.json()
-
-        if isinstance(data, list) and data:
-            return data[0], None
-
-        return data, None
     except Exception:
+        logger.error(
+            "PROFILE CREATION INVALID JSON | user_id=%s",
+            user_id
+        )
         return None, "Invalid database response."
+
+    if isinstance(data, list):
+        if not data:
+            return None, "Profile was not returned after creation."
+        return data[0], None
+
+    if isinstance(data, dict):
+        return data, None
+
+    return None, "Invalid database response."
 
 def get_profile(user_id):
     url = f"{SUPABASE_REST_URL}/profiles"
@@ -393,25 +524,24 @@ def get_profile(user_id):
         response = http.get(
             url,
             params=params,
-            headers=supabase_database_headers(
-                use_service_role=True
-            ),
-            timeout=15
+            headers=supabase_database_headers(),
+            timeout=20
         )
     except requests.RequestException as exc:
         logger.error(
-            "Profile lookup error: %s",
+            "PROFILE LOOKUP CONNECTION ERROR | user_id=%s | error=%s",
+            user_id,
             exc
         )
-
         return None, "Unable to retrieve profile."
 
     if response.status_code != 200:
         error = extract_supabase_error(response)
 
         logger.error(
-            "PROFILE LOOKUP FAILED | user_id=%s | error=%s",
+            "PROFILE LOOKUP FAILED | user_id=%s | status=%s | error=%s",
             user_id,
+            response.status_code,
             error
         )
 
@@ -419,13 +549,13 @@ def get_profile(user_id):
 
     try:
         data = response.json()
-
-        if not data:
-            return None, None
-
-        return data[0], None
     except Exception:
         return None, "Invalid database response."
+
+    if not data:
+        return None, None
+
+    return data[0], None
 
 def check_username_exists(username):
     url = f"{SUPABASE_REST_URL}/profiles"
@@ -439,25 +569,24 @@ def check_username_exists(username):
         response = http.get(
             url,
             params=params,
-            headers=supabase_database_headers(
-                use_service_role=True
-            ),
-            timeout=15
+            headers=supabase_database_headers(),
+            timeout=20
         )
     except requests.RequestException as exc:
         logger.error(
-            "Username lookup error: %s",
+            "USERNAME LOOKUP CONNECTION ERROR | username=%s | error=%s",
+            username,
             exc
         )
-
         return None, "Unable to check username."
 
     if response.status_code != 200:
         error = extract_supabase_error(response)
 
         logger.error(
-            "USERNAME LOOKUP FAILED | username=%s | error=%s",
+            "USERNAME LOOKUP FAILED | username=%s | status=%s | error=%s",
             username,
+            response.status_code,
             error
         )
 
@@ -465,10 +594,10 @@ def check_username_exists(username):
 
     try:
         data = response.json()
-
-        return len(data) > 0, None
     except Exception:
         return None, "Invalid database response."
+
+    return len(data) > 0, None
 
 def require_authentication(function):
     @wraps(function)
@@ -617,6 +746,7 @@ def signup():
             "already registered" in lower_error
             or "already exists" in lower_error
             or "already been registered" in lower_error
+            or "user already registered" in lower_error
         ):
             return json_error(
                 "An account with this email already exists.",
@@ -637,6 +767,10 @@ def signup():
     user = auth_data.get("user")
 
     if not user:
+        logger.error(
+            "SIGNUP FAILED | Supabase returned no user."
+        )
+
         return json_error(
             "Account creation failed: Supabase returned no user.",
             500
@@ -645,6 +779,10 @@ def signup():
     user_id = user.get("id")
 
     if not user_id:
+        logger.error(
+            "SIGNUP FAILED | Supabase returned no user ID."
+        )
+
         return json_error(
             "Account creation returned no user ID.",
             500
@@ -664,12 +802,32 @@ def signup():
             profile_error
         )
 
+        rollback_success, rollback_error = delete_auth_user(
+            user_id
+        )
+
+        if not rollback_success:
+            logger.critical(
+                "CRITICAL SIGNUP ROLLBACK FAILURE | "
+                "user_id=%s | profile_error=%s | rollback_error=%s",
+                user_id,
+                profile_error,
+                rollback_error
+            )
+
+            return json_error(
+                "Account creation could not be completed. "
+                "Please contact support.",
+                500
+            )
+
         return json_error(
-            "Account was created, but your profile could not be saved.",
+            "Account creation could not be completed. "
+            "Please try again.",
             500
         )
 
-    session = auth_data.get("session")
+    session = extract_session(auth_data)
 
     response_data = {
         "user": {
@@ -685,13 +843,7 @@ def signup():
             "Account created and authenticated successfully."
         )
 
-        response_data["session"] = {
-            "access_token": session.get("access_token"),
-            "refresh_token": session.get("refresh_token"),
-            "expires_in": session.get("expires_in"),
-            "expires_at": session.get("expires_at"),
-            "token_type": session.get("token_type")
-        }
+        response_data["session"] = session
     else:
         response_data["message"] = (
             "Account created successfully. "
@@ -699,7 +851,7 @@ def signup():
         )
 
     logger.info(
-        "New user registered: user_id=%s email=%s username=%s",
+        "NEW USER REGISTERED | user_id=%s | email=%s | username=%s",
         user_id,
         email,
         username
@@ -745,7 +897,7 @@ def login():
 
     if auth_error:
         logger.warning(
-            "Supabase login rejected user %s: %s",
+            "SUPABASE LOGIN REJECTED | email=%s | error=%s",
             email,
             auth_error
         )
@@ -762,15 +914,38 @@ def login():
         )
 
     user = auth_data.get("user")
-    session = auth_data.get("session")
+    session = extract_session(auth_data)
 
-    if not user or not session:
+    if not user:
+        logger.error(
+            "LOGIN FAILED | Supabase returned no user | email=%s",
+            email
+        )
+
+        return json_error(
+            "Login was unsuccessful. No authenticated user was returned.",
+            401
+        )
+
+    if not session:
+        logger.error(
+            "LOGIN FAILED | no session returned | user_id=%s | email=%s",
+            user.get("id"),
+            email
+        )
+
         return json_error(
             "Login was unsuccessful. No authentication session was returned.",
             401
         )
 
     user_id = user.get("id")
+
+    if not user_id:
+        return json_error(
+            "Login was unsuccessful. No user ID was returned.",
+            401
+        )
 
     profile, profile_error = get_profile(
         user_id
@@ -784,7 +959,7 @@ def login():
         )
 
         return json_error(
-            "Unable to retrieve user profile.",
+            "Authentication succeeded, but the user profile could not be retrieved.",
             500
         )
 
@@ -808,18 +983,13 @@ def login():
             "full_name": profile.get("full_name"),
             "username": profile.get("username")
         },
-        "session": {
-            "access_token": session.get("access_token"),
-            "refresh_token": session.get("refresh_token"),
-            "expires_in": session.get("expires_in"),
-            "expires_at": session.get("expires_at"),
-            "token_type": session.get("token_type")
-        }
+        "session": session
     }
 
     logger.info(
-        "Successful login for user: %s",
-        user_id
+        "SUCCESSFUL LOGIN | user_id=%s | email=%s",
+        user_id,
+        email
     )
 
     return json_success(
@@ -865,15 +1035,14 @@ def current_user():
 @app.route("/api/auth/logout", methods=["POST"])
 @require_authentication
 def logout():
-    access_token = g.access_token
-
     success, error = supabase_logout(
-        access_token
+        g.access_token
     )
 
     if not success:
         logger.error(
-            "Logout failed: %s",
+            "LOGOUT FAILED | user_id=%s | error=%s",
+            g.user.get("id"),
             error
         )
 
@@ -881,6 +1050,11 @@ def logout():
             "Logout failed.",
             500
         )
+
+    logger.info(
+        "LOGOUT SUCCESSFUL | user_id=%s",
+        g.user.get("id")
+    )
 
     return json_success({
         "message": "Logged out successfully."
@@ -912,7 +1086,7 @@ def forgot_password():
         "email": email
     }
 
-    if FRONTEND_URL and FRONTEND_URL != "*":
+    if FRONTEND_URL:
         payload["redirect_to"] = FRONTEND_URL
 
     try:
@@ -920,11 +1094,11 @@ def forgot_password():
             url,
             headers=supabase_auth_headers(),
             json=payload,
-            timeout=15
+            timeout=20
         )
     except requests.RequestException as exc:
         logger.error(
-            "Password recovery connection error: %s",
+            "PASSWORD RECOVERY CONNECTION ERROR | error=%s",
             exc
         )
 
@@ -935,7 +1109,8 @@ def forgot_password():
 
     if response.status_code not in (200, 201, 204):
         logger.warning(
-            "Password recovery request failed: %s",
+            "PASSWORD RECOVERY REQUEST FAILED | status=%s | error=%s",
+            response.status_code,
             extract_supabase_error(response)
         )
 
@@ -982,11 +1157,11 @@ def refresh_session():
             params=params,
             headers=supabase_auth_headers(),
             json=payload,
-            timeout=15
+            timeout=20
         )
     except requests.RequestException as exc:
         logger.error(
-            "Token refresh connection error: %s",
+            "TOKEN REFRESH CONNECTION ERROR | error=%s",
             exc
         )
 
@@ -999,7 +1174,8 @@ def refresh_session():
         error = extract_supabase_error(response)
 
         logger.warning(
-            "Token refresh failed: %s",
+            "TOKEN REFRESH FAILED | status=%s | error=%s",
+            response.status_code,
             error
         )
 
@@ -1009,22 +1185,24 @@ def refresh_session():
         )
 
     try:
-        session = response.json()
+        data = response.json()
     except Exception:
         return json_error(
             "Invalid response from authentication service.",
             500
         )
 
+    session = extract_session(data)
+
+    if not session:
+        return json_error(
+            "Authentication service returned no refreshed session.",
+            500
+        )
+
     return json_success({
         "message": "Session refreshed successfully.",
-        "session": {
-            "access_token": session.get("access_token"),
-            "refresh_token": session.get("refresh_token"),
-            "expires_in": session.get("expires_in"),
-            "expires_at": session.get("expires_at"),
-            "token_type": session.get("token_type")
-        }
+        "session": session
     })
 
 @app.errorhandler(400)
@@ -1051,7 +1229,7 @@ def method_not_allowed(error):
 @app.errorhandler(500)
 def internal_server_error(error):
     logger.exception(
-        "Unhandled server error: %s",
+        "UNHANDLED SERVER ERROR | error=%s",
         error
     )
 
