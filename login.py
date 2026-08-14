@@ -29,8 +29,10 @@ def validate_environment():
 
     if not SUPABASE_URL:
         missing.append("SUPABASE_URL")
+
     if not SUPABASE_ANON_KEY:
         missing.append("SUPABASE_ANON_KEY")
+
     if not SUPABASE_SERVICE_ROLE_KEY:
         missing.append("SUPABASE_SERVICE_ROLE_KEY")
 
@@ -59,6 +61,7 @@ CORS(
 )
 
 http = requests.Session()
+
 http.headers.update({
     "Accept": "application/json"
 })
@@ -73,7 +76,9 @@ def json_error(message, status_code=400, **extra):
         "success": False,
         "error": message
     }
+
     payload.update(extra)
+
     return jsonify(payload), status_code
 
 def json_success(data=None, status_code=200):
@@ -92,7 +97,9 @@ def get_json_body():
 
     try:
         data = request.get_json(silent=True)
+
         return data if isinstance(data, dict) else None
+
     except Exception:
         return None
 
@@ -117,7 +124,10 @@ def validate_email(email):
     ) is not None
 
 def validate_password(password):
-    return isinstance(password, str) and len(password) >= MIN_PASSWORD_LENGTH
+    return (
+        isinstance(password, str)
+        and len(password) >= MIN_PASSWORD_LENGTH
+    )
 
 def validate_username(username):
     if not username:
@@ -152,7 +162,10 @@ def supabase_auth_headers(api_key=None, access_token=None):
 
     return headers
 
-def supabase_database_headers(use_service_role=True, access_token=None):
+def supabase_database_headers(
+    use_service_role=True,
+    access_token=None
+):
     key = (
         SUPABASE_SERVICE_ROLE_KEY
         if use_service_role
@@ -175,9 +188,15 @@ def supabase_database_headers(use_service_role=True, access_token=None):
 def extract_supabase_error(response):
     try:
         data = response.json()
+
     except Exception:
         text = response.text.strip()
-        return text[:500] if text else "Supabase request failed."
+
+        return (
+            text[:500]
+            if text
+            else "Supabase request failed."
+        )
 
     if isinstance(data, dict):
         for key in (
@@ -188,6 +207,7 @@ def extract_supabase_error(response):
             "error_code"
         ):
             value = data.get(key)
+
             if value:
                 return str(value)
 
@@ -208,10 +228,17 @@ def build_session(data):
         "refresh_token": refresh_token,
         "expires_in": data.get("expires_in"),
         "expires_at": data.get("expires_at"),
-        "token_type": data.get("token_type", "bearer")
+        "token_type": data.get(
+            "token_type",
+            "bearer"
+        )
     }
 
-def supabase_signup(email, password, user_metadata):
+def supabase_signup(
+    email,
+    password,
+    user_metadata
+):
     url = f"{SUPABASE_AUTH_URL}/signup"
 
     payload = {
@@ -235,16 +262,19 @@ def supabase_signup(email, password, user_metadata):
             json=payload,
             timeout=20
         )
+
     except requests.RequestException as exc:
         logger.error(
             "SUPABASE SIGNUP CONNECTION ERROR | email=%s | error=%s",
             email,
             exc
         )
+
         return None, "Unable to connect to authentication service."
 
     try:
         response_data = response.json()
+
     except Exception:
         response_data = {}
 
@@ -268,7 +298,10 @@ def supabase_signup(email, password, user_metadata):
 
     return response_data, None
 
-def supabase_login(email, password):
+def supabase_login(
+    email,
+    password
+):
     url = f"{SUPABASE_AUTH_URL}/token"
 
     params = {
@@ -288,16 +321,19 @@ def supabase_login(email, password):
             json=payload,
             timeout=20
         )
+
     except requests.RequestException as exc:
         logger.error(
             "SUPABASE LOGIN CONNECTION ERROR | email=%s | error=%s",
             email,
             exc
         )
+
         return None, "Unable to connect to authentication service."
 
     try:
         data = response.json()
+
     except Exception:
         data = {}
 
@@ -340,11 +376,13 @@ def supabase_get_user(access_token):
             ),
             timeout=20
         )
+
     except requests.RequestException as exc:
         logger.error(
             "SUPABASE USER VERIFICATION ERROR | error=%s",
             exc
         )
+
         return None, "Unable to verify authentication."
 
     if response.status_code != 200:
@@ -352,8 +390,56 @@ def supabase_get_user(access_token):
 
     try:
         return response.json(), None
+
     except Exception:
         return None, "Invalid authentication response."
+
+def supabase_update_password(
+    access_token,
+    password
+):
+    url = f"{SUPABASE_AUTH_URL}/user"
+
+    payload = {
+        "password": password
+    }
+
+    try:
+        response = http.put(
+            url,
+            headers=supabase_auth_headers(
+                access_token=access_token
+            ),
+            json=payload,
+            timeout=20
+        )
+
+    except requests.RequestException as exc:
+        logger.error(
+            "SUPABASE PASSWORD UPDATE CONNECTION ERROR | error=%s",
+            exc
+        )
+
+        return None, "Unable to connect to authentication service."
+
+    if response.status_code not in (200, 201):
+        error = extract_supabase_error(response)
+
+        logger.warning(
+            "SUPABASE PASSWORD UPDATE FAILED | status=%s | error=%s",
+            response.status_code,
+            error
+        )
+
+        return None, error
+
+    try:
+        data = response.json()
+
+    except Exception:
+        data = {}
+
+    return data, None
 
 def supabase_logout(access_token):
     url = f"{SUPABASE_AUTH_URL}/logout"
@@ -366,11 +452,13 @@ def supabase_logout(access_token):
             ),
             timeout=20
         )
+
     except requests.RequestException as exc:
         logger.error(
             "SUPABASE LOGOUT ERROR | error=%s",
             exc
         )
+
         return False, "Unable to contact authentication service."
 
     if response.status_code not in (200, 204):
@@ -378,7 +466,12 @@ def supabase_logout(access_token):
 
     return True, None
 
-def create_profile(user_id, email, full_name, username):
+def create_profile(
+    user_id,
+    email,
+    full_name,
+    username
+):
     url = f"{SUPABASE_REST_URL}/profiles"
 
     payload = {
@@ -397,12 +490,14 @@ def create_profile(user_id, email, full_name, username):
             json=payload,
             timeout=20
         )
+
     except requests.RequestException as exc:
         logger.error(
             "PROFILE DATABASE CONNECTION ERROR | user_id=%s | error=%s",
             user_id,
             exc
         )
+
         return None, "Unable to save user profile."
 
     if response.status_code not in (200, 201):
@@ -427,6 +522,7 @@ def create_profile(user_id, email, full_name, username):
             return data, None
 
         return None, "Invalid database response."
+
     except Exception:
         return None, "Invalid database response."
 
@@ -447,12 +543,14 @@ def get_profile(user_id):
             ),
             timeout=20
         )
+
     except requests.RequestException as exc:
         logger.error(
             "PROFILE LOOKUP ERROR | user_id=%s | error=%s",
             user_id,
             exc
         )
+
         return None, "Unable to retrieve profile."
 
     if response.status_code != 200:
@@ -474,6 +572,7 @@ def get_profile(user_id):
             return None, None
 
         return data[0], None
+
     except Exception:
         return None, "Invalid database response."
 
@@ -495,12 +594,14 @@ def check_username_exists(username):
             ),
             timeout=20
         )
+
     except requests.RequestException as exc:
         logger.error(
             "USERNAME LOOKUP ERROR | username=%s | error=%s",
             username,
             exc
         )
+
         return None, "Unable to check username."
 
     if response.status_code != 200:
@@ -516,7 +617,11 @@ def check_username_exists(username):
 
     try:
         data = response.json()
-        return bool(isinstance(data, list) and data), None
+
+        return bool(
+            isinstance(data, list) and data
+        ), None
+
     except Exception:
         return None, "Invalid database response."
 
@@ -548,7 +653,9 @@ def require_authentication(function):
                 401
             )
 
-        user, error = supabase_get_user(access_token)
+        user, error = supabase_get_user(
+            access_token
+        )
 
         if error or not user:
             return json_error(
@@ -592,7 +699,10 @@ def signup():
         clean_string(data.get("email"))
     )
 
-    password = data.get("password", "")
+    password = data.get(
+        "password",
+        ""
+    )
 
     full_name = clean_string(
         data.get("full_name"),
@@ -630,7 +740,9 @@ def signup():
             400
         )
 
-    username_exists, username_error = check_username_exists(username)
+    username_exists, username_error = check_username_exists(
+        username
+    )
 
     if username_error:
         return json_error(
@@ -794,7 +906,10 @@ def login():
         clean_string(data.get("email"))
     )
 
-    password = data.get("password", "")
+    password = data.get(
+        "password",
+        ""
+    )
 
     if not validate_email(email):
         return json_error(
@@ -875,7 +990,9 @@ def login():
             500
         )
 
-    profile, profile_error = get_profile(user_id)
+    profile, profile_error = get_profile(
+        user_id
+    )
 
     if profile_error:
         logger.error(
@@ -953,7 +1070,10 @@ def login():
             "refresh_token": session.get("refresh_token"),
             "expires_in": session.get("expires_in"),
             "expires_at": session.get("expires_at"),
-            "token_type": session.get("token_type", "bearer")
+            "token_type": session.get(
+                "token_type",
+                "bearer"
+            )
         }
     }
 
@@ -968,13 +1088,190 @@ def login():
         200
     )
 
+@app.route("/api/auth/forgot-password", methods=["POST"])
+def forgot_password():
+    data = get_json_body()
+
+    if not data:
+        return json_error(
+            "Request body must be valid JSON.",
+            400
+        )
+
+    email = normalize_email(
+        clean_string(data.get("email"))
+    )
+
+    if not validate_email(email):
+        return json_error(
+            "Please provide a valid email address.",
+            400
+        )
+
+    url = f"{SUPABASE_AUTH_URL}/recover"
+
+    payload = {
+        "email": email
+    }
+
+    if FRONTEND_URL and FRONTEND_URL != "*":
+        payload["redirect_to"] = FRONTEND_URL
+
+    try:
+        response = http.post(
+            url,
+            headers=supabase_auth_headers(),
+            json=payload,
+            timeout=20
+        )
+
+    except requests.RequestException as exc:
+        logger.error(
+            "PASSWORD RECOVERY CONNECTION ERROR | error=%s",
+            exc
+        )
+
+        return json_error(
+            "Unable to process password recovery.",
+            500
+        )
+
+    if response.status_code not in (200, 201, 204):
+        error = extract_supabase_error(response)
+
+        logger.warning(
+            "PASSWORD RECOVERY REQUEST FAILED | status=%s | error=%s",
+            response.status_code,
+            error
+        )
+
+        if response.status_code == 429:
+            return json_error(
+                "Too many password reset requests. Please wait before requesting another email.",
+                429
+            )
+
+        return json_error(
+            "Unable to process password recovery.",
+            502
+        )
+
+    logger.info(
+        "PASSWORD RECOVERY REQUEST ACCEPTED | email=%s",
+        email
+    )
+
+    return json_success({
+        "message": "If an account exists for this email, a password reset email will be sent."
+    })
+
+@app.route("/api/auth/reset-password", methods=["POST"])
+def reset_password():
+    data = get_json_body()
+
+    if not data:
+        return json_error(
+            "Request body must be valid JSON.",
+            400
+        )
+
+    password = data.get(
+        "password",
+        ""
+    )
+
+    if not validate_password(password):
+        return json_error(
+            f"Password must be at least {MIN_PASSWORD_LENGTH} characters.",
+            400
+        )
+
+    authorization = request.headers.get(
+        "Authorization",
+        ""
+    )
+
+    if not authorization:
+        return json_error(
+            "Password reset authentication token is required.",
+            401
+        )
+
+    if not authorization.startswith("Bearer "):
+        return json_error(
+            "Invalid authorization header.",
+            401
+        )
+
+    access_token = authorization[7:].strip()
+
+    if not access_token:
+        return json_error(
+            "Password reset authentication token is required.",
+            401
+        )
+
+    user, user_error = supabase_get_user(
+        access_token
+    )
+
+    if user_error or not user:
+        logger.warning(
+            "PASSWORD RESET REJECTED | invalid recovery token | error=%s",
+            user_error
+        )
+
+        return json_error(
+            "Your password reset link is invalid or has expired. Please request a new password reset email.",
+            401
+        )
+
+    updated_user, update_error = supabase_update_password(
+        access_token=access_token,
+        password=password
+    )
+
+    if update_error:
+        logger.error(
+            "PASSWORD RESET FAILED | user_id=%s | error=%s",
+            user.get("id"),
+            update_error
+        )
+
+        lower_error = update_error.lower()
+
+        if (
+            "password" in lower_error
+            and "weak" in lower_error
+        ):
+            return json_error(
+                "The new password does not meet the password security requirements.",
+                400
+            )
+
+        return json_error(
+            update_error,
+            400
+        )
+
+    logger.info(
+        "PASSWORD RESET SUCCESS | user_id=%s",
+        user.get("id")
+    )
+
+    return json_success({
+        "message": "Your password has been updated successfully."
+    })
+
 @app.route("/api/auth/me", methods=["GET"])
 @require_authentication
 def current_user():
     user = g.user
     user_id = user.get("id")
 
-    profile, profile_error = get_profile(user_id)
+    profile, profile_error = get_profile(
+        user_id
+    )
 
     if profile_error:
         return json_error(
@@ -1028,64 +1325,6 @@ def logout():
         "message": "Logged out successfully."
     })
 
-@app.route("/api/auth/forgot-password", methods=["POST"])
-def forgot_password():
-    data = get_json_body()
-
-    if not data:
-        return json_error(
-            "Request body must be valid JSON.",
-            400
-        )
-
-    email = normalize_email(
-        clean_string(data.get("email"))
-    )
-
-    if not validate_email(email):
-        return json_error(
-            "Please provide a valid email address.",
-            400
-        )
-
-    url = f"{SUPABASE_AUTH_URL}/recover"
-
-    payload = {
-        "email": email
-    }
-
-    if FRONTEND_URL and FRONTEND_URL != "*":
-        payload["redirect_to"] = FRONTEND_URL
-
-    try:
-        response = http.post(
-            url,
-            headers=supabase_auth_headers(),
-            json=payload,
-            timeout=20
-        )
-    except requests.RequestException as exc:
-        logger.error(
-            "PASSWORD RECOVERY CONNECTION ERROR | error=%s",
-            exc
-        )
-
-        return json_error(
-            "Unable to process password recovery.",
-            500
-        )
-
-    if response.status_code not in (200, 201, 204):
-        logger.warning(
-            "PASSWORD RECOVERY REQUEST FAILED | status=%s | error=%s",
-            response.status_code,
-            extract_supabase_error(response)
-        )
-
-    return json_success({
-        "message": "If an account exists for this email, a password reset email will be sent."
-    })
-
 @app.route("/api/auth/refresh", methods=["POST"])
 def refresh_session():
     data = get_json_body()
@@ -1124,6 +1363,7 @@ def refresh_session():
             json=payload,
             timeout=20
         )
+
     except requests.RequestException as exc:
         logger.error(
             "TOKEN REFRESH CONNECTION ERROR | error=%s",
@@ -1150,6 +1390,7 @@ def refresh_session():
 
     try:
         data = response.json()
+
     except Exception:
         return json_error(
             "Invalid response from authentication service.",
