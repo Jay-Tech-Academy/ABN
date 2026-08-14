@@ -7,64 +7,341 @@
 <title>ABN Technologies | Secure Login</title>
 <meta name="description" content="Secure account access for ABN Technologies.">
 <style>
-:root{--bg:#fff;--panel:rgba(255,255,255,.94);--panel-2:#fff;--text:#101827;--muted:#647086;--border:rgba(16,24,39,.1);--accent:#6c63ff;--accent-2:#6c63ff;--success:#25c991;--danger:#ff5d73;--input:#f5f7fb;--shadow:0 30px 70px rgba(32,45,70,.16)}
+:root{
+  --bg:#fff;
+  --panel:rgba(255,255,255,.94);
+  --panel-2:#fff;
+  --text:#101827;
+  --muted:#647086;
+  --border:rgba(16,24,39,.10);
+  --accent:#6c63ff;
+  --accent-2:#6c63ff;
+  --success:#25c991;
+  --danger:#ff5d73;
+  --input:#f5f7fb;
+  --shadow:0 30px 70px rgba(32,45,70,.16);
+}
 *{box-sizing:border-box}
-body{margin:0;min-height:100vh;font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:var(--text);background:radial-gradient(circle at 15% 15%,rgba(108,99,255,.12),transparent 32%),radial-gradient(circle at 85% 80%,rgba(0,180,255,.08),transparent 28%),var(--bg);display:grid;place-items:center;padding:28px 16px}
-body.dark{--bg:#07101f;--panel:rgba(15,25,45,.88);--panel-2:#101b31;--text:#f5f7fb;--muted:#9ba8bd;--border:rgba(255,255,255,.1);--accent:#6c63ff;--accent-2:#8b84ff;--success:#25c991;--danger:#ff5d73;--input:rgba(255,255,255,.055);--shadow:0 30px 80px rgba(0,0,0,.38)}
-.shell{width:min(1040px,100%);display:grid;grid-template-columns:.9fr 1.1fr;min-height:650px;border:1px solid var(--border);border-radius:28px;overflow:hidden;background:var(--panel);box-shadow:var(--shadow);backdrop-filter:blur(18px)}
-.brand{padding:54px;display:flex;flex-direction:column;justify-content:space-between;background:linear-gradient(145deg,rgba(108,99,255,.1),transparent 55%),rgba(0,0,0,.01);border-right:1px solid var(--border)}
-.logo{display:flex;align-items:center;gap:12px;font-weight:800;font-size:19px;letter-spacing:-.4px}
-.logo-mark{width:42px;height:42px;border-radius:13px;display:grid;place-items:center;background:linear-gradient(135deg,var(--accent),#35b9ff);color:#fff;font-weight:900;box-shadow:0 12px 30px rgba(108,99,255,.22)}
-.brand h1{margin:80px 0 18px;font-size:clamp(36px,4vw,56px);line-height:.98;letter-spacing:-2.5px}
+body{
+  margin:0;
+  min-height:100vh;
+  font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+  color:var(--text);
+  background:
+    radial-gradient(circle at 15% 15%,rgba(108,99,255,.12),transparent 32%),
+    radial-gradient(circle at 85% 80%,rgba(0,180,255,.08),transparent 28%),
+    var(--bg);
+  display:grid;
+  place-items:center;
+  padding:28px 16px;
+}
+body.dark{
+  --bg:#07101f;
+  --panel:rgba(15,25,45,.88);
+  --panel-2:#101b31;
+  --text:#f5f7fb;
+  --muted:#9ba8bd;
+  --border:rgba(255,255,255,.10);
+  --accent:#6c63ff;
+  --accent-2:#8b84ff;
+  --success:#25c991;
+  --danger:#ff5d73;
+  --input:rgba(255,255,255,.055);
+  --shadow:0 30px 80px rgba(0,0,0,.38);
+}
+.shell{
+  width:min(1040px,100%);
+  display:grid;
+  grid-template-columns:.9fr 1.1fr;
+  min-height:650px;
+  border:1px solid var(--border);
+  border-radius:28px;
+  overflow:hidden;
+  background:var(--panel);
+  box-shadow:var(--shadow);
+  backdrop-filter:blur(18px);
+}
+.brand{
+  padding:54px;
+  display:flex;
+  flex-direction:column;
+  justify-content:space-between;
+  background:
+    linear-gradient(145deg,rgba(108,99,255,.10),transparent 55%),
+    rgba(0,0,0,.01);
+  border-right:1px solid var(--border);
+}
+.logo{
+  display:flex;
+  align-items:center;
+  gap:12px;
+  font-weight:800;
+  font-size:19px;
+  letter-spacing:-.4px;
+}
+.logo-mark{
+  width:42px;
+  height:42px;
+  border-radius:13px;
+  display:grid;
+  place-items:center;
+  background:linear-gradient(135deg,var(--accent),#35b9ff);
+  color:#fff;
+  font-weight:900;
+  box-shadow:0 12px 30px rgba(108,99,255,.22);
+}
+.brand h1{
+  margin:80px 0 18px;
+  font-size:clamp(36px,4vw,56px);
+  line-height:.98;
+  letter-spacing:-2.5px;
+}
 .brand h1 span{color:var(--accent-2)}
-.brand p{color:var(--muted);line-height:1.7;max-width:410px;margin:0}
-.trust{display:flex;gap:10px;flex-wrap:wrap;margin-top:28px}
-.badge{border:1px solid var(--border);border-radius:999px;padding:8px 12px;color:var(--muted);font-size:12px;background:rgba(0,0,0,.02)}
+.brand p{
+  color:var(--muted);
+  line-height:1.7;
+  max-width:410px;
+  margin:0;
+}
+.trust{
+  display:flex;
+  gap:10px;
+  flex-wrap:wrap;
+  margin-top:28px;
+}
+.badge{
+  border:1px solid var(--border);
+  border-radius:999px;
+  padding:8px 12px;
+  color:var(--muted);
+  font-size:12px;
+  background:rgba(0,0,0,.02);
+}
 .copyright{color:var(--muted);font-size:12px}
-.auth{padding:48px;display:flex;flex-direction:column;justify-content:center;background:var(--panel-2)}
-.topbar{display:flex;justify-content:flex-end;margin-bottom:24px}
-.theme-btn{border:1px solid var(--border);background:var(--input);color:var(--text);width:42px;height:42px;border-radius:12px;cursor:pointer;font-size:17px}
-.auth-inner{width:min(430px,100%);margin:auto}
-.eyebrow{color:var(--accent-2);font-size:12px;font-weight:800;letter-spacing:1.4px;text-transform:uppercase;margin-bottom:10px}
-.auth h2{margin:0;font-size:34px;letter-spacing:-1.3px}
-.subtitle{color:var(--muted);margin:10px 0 28px;line-height:1.55}
-.tabs{display:grid;grid-template-columns:1fr 1fr;padding:4px;background:var(--input);border:1px solid var(--border);border-radius:14px;margin-bottom:26px}
-.tab{border:0;background:transparent;color:var(--muted);padding:12px;border-radius:10px;cursor:pointer;font-weight:700}
-.tab.active{background:var(--accent);color:#fff}
+.auth{
+  padding:48px;
+  display:flex;
+  flex-direction:column;
+  justify-content:center;
+  background:var(--panel-2);
+}
+.topbar{
+  display:flex;
+  justify-content:flex-end;
+  margin-bottom:24px;
+}
+.theme-btn{
+  border:1px solid var(--border);
+  background:var(--input);
+  color:var(--text);
+  width:42px;
+  height:42px;
+  border-radius:12px;
+  cursor:pointer;
+  font-size:17px;
+}
+.auth-inner{
+  width:min(430px,100%);
+  margin:auto;
+}
+.eyebrow{
+  color:var(--accent-2);
+  font-size:12px;
+  font-weight:800;
+  letter-spacing:1.4px;
+  text-transform:uppercase;
+  margin-bottom:10px;
+}
+.auth h2{
+  margin:0;
+  font-size:34px;
+  letter-spacing:-1.3px;
+}
+.subtitle{
+  color:var(--muted);
+  margin:10px 0 28px;
+  line-height:1.55;
+}
+.tabs{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  padding:4px;
+  background:var(--input);
+  border:1px solid var(--border);
+  border-radius:14px;
+  margin-bottom:26px;
+}
+.tab{
+  border:0;
+  background:transparent;
+  color:var(--muted);
+  padding:12px;
+  border-radius:10px;
+  cursor:pointer;
+  font-weight:700;
+}
+.tab.active{
+  background:var(--accent);
+  color:#fff;
+}
 .form{display:none}
 .form.active{display:block}
 .field{margin-bottom:16px}
-label{display:block;font-size:13px;font-weight:700;margin-bottom:8px}
+label{
+  display:block;
+  font-size:13px;
+  font-weight:700;
+  margin-bottom:8px;
+}
 .input-wrap{position:relative}
-input{width:100%;border:1px solid var(--border);background:var(--input);color:var(--text);border-radius:12px;padding:14px 15px;outline:none;font:inherit;transition:.2s ease}
-input:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(108,99,255,.13)}
-.password-toggle{position:absolute;right:8px;top:7px;height:36px;padding:0 10px;border:0;background:transparent;color:var(--muted);cursor:pointer}
-.row{display:flex;justify-content:space-between;gap:12px;align-items:center;margin:5px 0 20px}
-.check{display:flex;align-items:center;gap:8px;color:var(--muted);font-size:12px}
+input{
+  width:100%;
+  border:1px solid var(--border);
+  background:var(--input);
+  color:var(--text);
+  border-radius:12px;
+  padding:14px 15px;
+  outline:none;
+  font:inherit;
+  transition:.2s ease;
+}
+input:focus{
+  border-color:var(--accent);
+  box-shadow:0 0 0 3px rgba(108,99,255,.13);
+}
+.password-toggle{
+  position:absolute;
+  right:8px;
+  top:7px;
+  height:36px;
+  padding:0 10px;
+  border:0;
+  background:transparent;
+  color:var(--muted);
+  cursor:pointer;
+}
+.row{
+  display:flex;
+  justify-content:space-between;
+  gap:12px;
+  align-items:center;
+  margin:5px 0 20px;
+}
+.check{
+  display:flex;
+  align-items:center;
+  gap:8px;
+  color:var(--muted);
+  font-size:12px;
+}
 .check input{width:auto}
-.link{color:var(--accent-2);text-decoration:none;font-size:12px;font-weight:700;cursor:pointer;background:none;border:0;padding:0}
-.submit{width:100%;border:0;border-radius:13px;padding:14px 18px;background:linear-gradient(135deg,var(--accent),#35aef7);color:#fff;font-weight:800;cursor:pointer;box-shadow:0 12px 28px rgba(108,99,255,.22);transition:transform .15s ease,opacity .15s ease}
+.link{
+  color:var(--accent-2);
+  text-decoration:none;
+  font-size:12px;
+  font-weight:700;
+  cursor:pointer;
+  background:none;
+  border:0;
+  padding:0;
+}
+.submit{
+  width:100%;
+  border:0;
+  border-radius:13px;
+  padding:14px 18px;
+  background:linear-gradient(135deg,var(--accent),#35aef7);
+  color:#fff;
+  font-weight:800;
+  cursor:pointer;
+  box-shadow:0 12px 28px rgba(108,99,255,.22);
+  transition:transform .15s ease,opacity .15s ease;
+}
 .submit:hover{transform:translateY(-1px)}
-.submit:disabled{opacity:.65;cursor:not-allowed;transform:none}
-.message{display:none;margin-bottom:18px;padding:14px 15px;border-radius:12px;font-size:13px;line-height:1.55}
+.submit:disabled{
+  opacity:.65;
+  cursor:not-allowed;
+  transform:none;
+}
+.message{
+  display:none;
+  margin-bottom:18px;
+  padding:14px 15px;
+  border-radius:12px;
+  font-size:13px;
+  line-height:1.55;
+}
 .message.show{display:block}
-.message.error{background:rgba(255,93,115,.1);border:1px solid rgba(255,93,115,.25);color:#d93850}
-.message.success{background:rgba(37,201,145,.1);border:1px solid rgba(37,201,145,.25);color:#15805d}
-.message.verification{background:rgba(108,99,255,.1);border:1px solid rgba(108,99,255,.25);color:var(--accent-2)}
-.fine-print{color:var(--muted);text-align:center;font-size:11px;line-height:1.6;margin-top:18px}
-.fine-print a{color:var(--accent-2);text-decoration:none}
-.strength{height:4px;background:var(--border);border-radius:20px;overflow:hidden;margin-top:8px;display:none}
-.strength span{display:block;height:100%;width:0;transition:width .2s ease}
+.message.error{
+  background:rgba(255,93,115,.10);
+  border:1px solid rgba(255,93,115,.25);
+  color:#d93850;
+}
+.message.success{
+  background:rgba(37,201,145,.10);
+  border:1px solid rgba(37,201,145,.25);
+  color:#15805d;
+}
+.message.verification{
+  background:rgba(108,99,255,.10);
+  border:1px solid rgba(108,99,255,.25);
+  color:var(--accent-2);
+}
+.fine-print{
+  color:var(--muted);
+  text-align:center;
+  font-size:11px;
+  line-height:1.6;
+  margin-top:18px;
+}
+.fine-print a{
+  color:var(--accent-2);
+  text-decoration:none;
+}
+.strength{
+  height:4px;
+  background:var(--border);
+  border-radius:20px;
+  overflow:hidden;
+  margin-top:8px;
+  display:none;
+}
+.strength span{
+  display:block;
+  height:100%;
+  width:0;
+  transition:width .2s ease;
+}
+.reset-back{
+  display:none;
+  margin-top:14px;
+  text-align:center;
+}
+.reset-back.show{display:block}
 @media(max-width:820px){
-.shell{grid-template-columns:1fr;min-height:auto}
-.brand{padding:32px;border-right:0;border-bottom:1px solid var(--border)}
-.brand h1{margin:48px 0 15px;font-size:42px}
-.copyright{margin-top:34px}
-.auth{padding:30px 22px 36px}
+  .shell{
+    grid-template-columns:1fr;
+    min-height:auto;
+  }
+  .brand{
+    padding:32px;
+    border-right:0;
+    border-bottom:1px solid var(--border);
+  }
+  .brand h1{
+    margin:48px 0 15px;
+    font-size:42px;
+  }
+  .copyright{margin-top:34px}
+  .auth{padding:30px 22px 36px}
 }
 @media(max-width:430px){
-body{padding:0}
-.shell{border-radius:0;border:0;min-height:100vh}
+  body{padding:0}
+  .shell{
+    border-radius:0;
+    border:0;
+    min-height:100vh;
+  }
 }
 </style>
 </head>
@@ -94,7 +371,7 @@ body{padding:0}
 <div class="eyebrow">ABN Technologies</div>
 <h2 id="heading">Welcome back</h2>
 <p class="subtitle" id="subtitle">Sign in to continue to your account.</p>
-<div class="tabs">
+<div class="tabs" id="tabs">
 <button class="tab active" id="loginTab" type="button">Login</button>
 <button class="tab" id="signupTab" type="button">Create account</button>
 </div>
@@ -157,6 +434,27 @@ Remember me
 <button class="submit" id="signupSubmit" type="submit">Create account</button>
 </form>
 
+<form id="resetForm" class="form" novalidate>
+<div class="field">
+<label for="newPassword">New password</label>
+<div class="input-wrap">
+<input id="newPassword" type="password" autocomplete="new-password" minlength="8" placeholder="At least 8 characters" required>
+<button class="password-toggle" type="button" data-target="newPassword">Show</button>
+</div>
+</div>
+<div class="field">
+<label for="confirmNewPassword">Confirm new password</label>
+<div class="input-wrap">
+<input id="confirmNewPassword" type="password" autocomplete="new-password" minlength="8" placeholder="Repeat your new password" required>
+<button class="password-toggle" type="button" data-target="confirmNewPassword">Show</button>
+</div>
+</div>
+<button class="submit" id="resetSubmit" type="submit">Update password</button>
+<div class="reset-back" id="resetBack">
+<button class="link" type="button" id="backToLogin">Return to login</button>
+</div>
+</form>
+
 <p class="fine-print">Your authentication is handled through Supabase and your application backend. Never share your password with anyone.</p>
 </div>
 </section>
@@ -164,46 +462,62 @@ Remember me
 
 <script>
 const API_BASE_URL="https://abn-ulmz.onrender.com";
-
 const loginTab=document.getElementById("loginTab");
 const signupTab=document.getElementById("signupTab");
 const loginForm=document.getElementById("loginForm");
 const signupForm=document.getElementById("signupForm");
+const resetForm=document.getElementById("resetForm");
+const tabs=document.getElementById("tabs");
 const heading=document.getElementById("heading");
 const subtitle=document.getElementById("subtitle");
 const message=document.getElementById("message");
+const resetBack=document.getElementById("resetBack");
+let recoveryAccessToken=null;
 
 function showMessage(text,type="error"){
-message.textContent=text;
-message.className=`message show ${type}`;
+  message.textContent=text;
+  message.className=`message show ${type}`;
 }
 
 function clearMessage(){
-message.textContent="";
-message.className="message";
+  message.textContent="";
+  message.className="message";
 }
 
 function setMode(mode){
-clearMessage();
-const login=mode==="login";
-loginTab.classList.toggle("active",login);
-signupTab.classList.toggle("active",!login);
-loginForm.classList.toggle("active",login);
-signupForm.classList.toggle("active",!login);
-heading.textContent=login?"Welcome back":"Create your account";
-subtitle.textContent=login?"Sign in to continue to your account.":"Join ABN Technologies and create your secure account.";
+  clearMessage();
+  const login=mode==="login";
+  loginTab.classList.toggle("active",login);
+  signupTab.classList.toggle("active",!login);
+  loginForm.classList.toggle("active",login);
+  signupForm.classList.toggle("active",!login);
+  resetForm.classList.remove("active");
+  tabs.style.display="grid";
+  heading.textContent=login?"Welcome back":"Create your account";
+  subtitle.textContent=login?"Sign in to continue to your account.":"Join ABN Technologies and create your secure account.";
+}
+
+function showResetMode(){
+  clearMessage();
+  loginForm.classList.remove("active");
+  signupForm.classList.remove("active");
+  resetForm.classList.add("active");
+  tabs.style.display="none";
+  heading.textContent="Reset your password";
+  subtitle.textContent="Enter a new password for your ABN Technologies account.";
+  resetBack.classList.remove("show");
 }
 
 loginTab.addEventListener("click",()=>setMode("login"));
 signupTab.addEventListener("click",()=>setMode("signup"));
 
 document.querySelectorAll(".password-toggle").forEach(button=>{
-button.addEventListener("click",()=>{
-const input=document.getElementById(button.dataset.target);
-const visible=input.type==="text";
-input.type=visible?"password":"text";
-button.textContent=visible?"Show":"Hide";
-});
+  button.addEventListener("click",()=>{
+    const input=document.getElementById(button.dataset.target);
+    const visible=input.type==="text";
+    input.type=visible?"password":"text";
+    button.textContent=visible?"Show":"Hide";
+  });
 });
 
 const signupPassword=document.getElementById("signupPassword");
@@ -211,243 +525,355 @@ const strength=document.getElementById("strength");
 const strengthBar=strength.querySelector("span");
 
 signupPassword.addEventListener("input",()=>{
-const value=signupPassword.value;
-if(!value){
-strength.style.display="none";
-return;
-}
-strength.style.display="block";
-let score=0;
-if(value.length>=8)score++;
-if(/[A-Z]/.test(value))score++;
-if(/[a-z]/.test(value))score++;
-if(/[0-9]/.test(value))score++;
-if(/[^A-Za-z0-9]/.test(value))score++;
-const widths=["20%","35%","55%","75%","100%"];
-strengthBar.style.width=widths[Math.max(0,score-1)];
+  const value=signupPassword.value;
+  if(!value){
+    strength.style.display="none";
+    return;
+  }
+  strength.style.display="block";
+  let score=0;
+  if(value.length>=8)score++;
+  if(/[A-Z]/.test(value))score++;
+  if(/[a-z]/.test(value))score++;
+  if(/[0-9]/.test(value))score++;
+  if(/[^A-Za-z0-9]/.test(value))score++;
+  const widths=["20%","35%","55%","75%","100%"];
+  strengthBar.style.width=widths[Math.max(0,score-1)];
 });
+
+function parseRecoverySession(){
+  const hash=window.location.hash.replace(/^#/,"");
+  if(!hash)return false;
+
+  const params=new URLSearchParams(hash);
+  const type=params.get("type");
+  const accessToken=params.get("access_token");
+
+  if(type!=="recovery"||!accessToken)return false;
+
+  recoveryAccessToken=accessToken;
+  showResetMode();
+
+  window.history.replaceState(
+    {},
+    document.title,
+    window.location.pathname+window.location.search
+  );
+
+  return true;
+}
 
 loginForm.addEventListener("submit",async event=>{
-event.preventDefault();
-clearMessage();
+  event.preventDefault();
+  clearMessage();
 
-const email=document.getElementById("loginEmail").value.trim().toLowerCase();
-const password=document.getElementById("loginPassword").value;
-const button=document.getElementById("loginSubmit");
+  const email=document.getElementById("loginEmail").value.trim().toLowerCase();
+  const password=document.getElementById("loginPassword").value;
+  const button=document.getElementById("loginSubmit");
 
-if(!email||!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)){
-showMessage("Please enter a valid email address.");
-return;
-}
+  if(!email||!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)){
+    showMessage("Please enter a valid email address.");
+    return;
+  }
 
-if(!password){
-showMessage("Please enter your password.");
-return;
-}
+  if(!password){
+    showMessage("Please enter your password.");
+    return;
+  }
 
-button.disabled=true;
-button.textContent="Signing in...";
+  button.disabled=true;
+  button.textContent="Signing in...";
 
-try{
-const response=await fetch(`${API_BASE_URL}/api/auth/login`,{
-method:"POST",
-headers:{"Content-Type":"application/json"},
-body:JSON.stringify({email,password})
-});
+  try{
+    const response=await fetch(`${API_BASE_URL}/api/auth/login`,{
+      method:"POST",
+      headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({email,password})
+    });
 
-const data=await response.json().catch(()=>({}));
+    const data=await response.json().catch(()=>({}));
 
-if(data.verification_required){
-showMessage(data.error||"Please check your email and click the authentication link to verify your account before signing in.","verification");
-return;
-}
+    if(data.verification_required){
+      showMessage(
+        data.error||
+        "Please check your email and click the authentication link to verify your account before signing in.",
+        "verification"
+      );
+      return;
+    }
 
-if(!response.ok||!data.success){
-throw new Error(data.error||"Login failed. Please try again.");
-}
+    if(!response.ok||!data.success){
+      throw new Error(data.error||"Login failed. Please try again.");
+    }
 
-if(!data.session||!data.session.access_token){
-throw new Error("Login succeeded but no authentication session was returned.");
-}
+    if(!data.session||!data.session.access_token){
+      throw new Error("Login succeeded but no authentication session was returned.");
+    }
 
-localStorage.setItem("abn_access_token",data.session.access_token);
+    localStorage.setItem("abn_access_token",data.session.access_token);
 
-if(data.session.refresh_token){
-localStorage.setItem("abn_refresh_token",data.session.refresh_token);
-}
+    if(data.session.refresh_token){
+      localStorage.setItem("abn_refresh_token",data.session.refresh_token);
+    }
 
-if(data.user){
-localStorage.setItem("abn_user",JSON.stringify(data.user));
-}
+    if(data.user){
+      localStorage.setItem("abn_user",JSON.stringify(data.user));
+    }
 
-showMessage("Login successful. Redirecting...","success");
+    showMessage("Login successful. Redirecting...","success");
 
-setTimeout(()=>{
-window.location.href="https://www.abnwebtech.online";
-},700);
-
-}catch(error){
-showMessage(error.message||"Login failed. Please try again.");
-}finally{
-button.disabled=false;
-button.textContent="Sign in";
-}
+    setTimeout(()=>{
+      window.location.href="https://www.abnwebtech.online";
+    },700);
+  }catch(error){
+    showMessage(error.message||"Login failed. Please try again.");
+  }finally{
+    button.disabled=false;
+    button.textContent="Sign in";
+  }
 });
 
 signupForm.addEventListener("submit",async event=>{
-event.preventDefault();
-clearMessage();
+  event.preventDefault();
+  clearMessage();
 
-const full_name=document.getElementById("fullName").value.trim();
-const username=document.getElementById("username").value.trim().toLowerCase();
-const email=document.getElementById("signupEmail").value.trim().toLowerCase();
-const password=document.getElementById("signupPassword").value;
-const confirmPassword=document.getElementById("confirmPassword").value;
-const terms=document.getElementById("terms").checked;
-const button=document.getElementById("signupSubmit");
+  const full_name=document.getElementById("fullName").value.trim();
+  const username=document.getElementById("username").value.trim().toLowerCase();
+  const email=document.getElementById("signupEmail").value.trim().toLowerCase();
+  const password=document.getElementById("signupPassword").value;
+  const confirmPassword=document.getElementById("confirmPassword").value;
+  const terms=document.getElementById("terms").checked;
+  const button=document.getElementById("signupSubmit");
 
-if(!full_name){
-showMessage("Please enter your full name.");
-return;
-}
+  if(!full_name){
+    showMessage("Please enter your full name.");
+    return;
+  }
 
-if(!/^[a-zA-Z0-9_.]{3,50}$/.test(username)){
-showMessage("Username must be 3-50 characters and use only letters, numbers, underscores or periods.");
-return;
-}
+  if(!/^[a-zA-Z0-9_.]{3,50}$/.test(username)){
+    showMessage("Username must be 3-50 characters and use only letters, numbers, underscores or periods.");
+    return;
+  }
 
-if(!email||!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)){
-showMessage("Please enter a valid email address.");
-return;
-}
+  if(!email||!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)){
+    showMessage("Please enter a valid email address.");
+    return;
+  }
 
-if(password.length<8){
-showMessage("Password must be at least 8 characters.");
-return;
-}
+  if(password.length<8){
+    showMessage("Password must be at least 8 characters.");
+    return;
+  }
 
-if(password!==confirmPassword){
-showMessage("Passwords do not match.");
-return;
-}
+  if(password!==confirmPassword){
+    showMessage("Passwords do not match.");
+    return;
+  }
 
-if(!terms){
-showMessage("Please accept the terms to create an account.");
-return;
-}
+  if(!terms){
+    showMessage("Please accept the terms to create an account.");
+    return;
+  }
 
-button.disabled=true;
-button.textContent="Creating account...";
+  button.disabled=true;
+  button.textContent="Creating account...";
 
-try{
-const response=await fetch(`${API_BASE_URL}/api/auth/signup`,{
-method:"POST",
-headers:{"Content-Type":"application/json"},
-body:JSON.stringify({email,password,full_name,username})
-});
+  try{
+    const response=await fetch(`${API_BASE_URL}/api/auth/signup`,{
+      method:"POST",
+      headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({email,password,full_name,username})
+    });
 
-const data=await response.json().catch(()=>({}));
+    const data=await response.json().catch(()=>({}));
 
-if(data.success&&data.verification_required){
-showMessage(data.message||"Your account has been created. Please check your email for the authentication link to verify your account.","verification");
-return;
-}
+    if(data.success&&data.verification_required){
+      showMessage(
+        data.message||
+        "Your account has been created. Please check your email for the authentication link to verify your account.",
+        "verification"
+      );
+      return;
+    }
 
-if(!response.ok||!data.success){
-throw new Error(data.error||"Signup failed. Please try again.");
-}
+    if(!response.ok||!data.success){
+      throw new Error(data.error||"Signup failed. Please try again.");
+    }
 
-if(data.session){
-if(data.session.access_token){
-localStorage.setItem("abn_access_token",data.session.access_token);
-}
-if(data.session.refresh_token){
-localStorage.setItem("abn_refresh_token",data.session.refresh_token);
-}
-}
+    if(data.session&&data.session.access_token){
+      localStorage.setItem("abn_access_token",data.session.access_token);
 
-if(data.user){
-localStorage.setItem("abn_user",JSON.stringify(data.user));
-}
+      if(data.session.refresh_token){
+        localStorage.setItem("abn_refresh_token",data.session.refresh_token);
+      }
+    }
 
-if(data.session&&data.session.access_token){
-showMessage("Account created successfully. Redirecting...","success");
-setTimeout(()=>{
-window.location.href="https://www.abnwebtech.online/";
-},700);
-return;
-}
+    if(data.user){
+      localStorage.setItem("abn_user",JSON.stringify(data.user));
+    }
 
-showMessage(data.message||"Account created successfully. Please check your email for the authentication link.","verification");
+    if(data.session&&data.session.access_token){
+      showMessage("Account created successfully. Redirecting...","success");
 
-}catch(error){
-showMessage(error.message||"Signup failed. Please try again.");
-}finally{
-button.disabled=false;
-button.textContent="Create account";
-}
+      setTimeout(()=>{
+        window.location.href="https://www.abnwebtech.online";
+      },700);
+
+      return;
+    }
+
+    showMessage(
+      data.message||
+      "Account created successfully. Please check your email for the authentication link.",
+      "verification"
+    );
+  }catch(error){
+    showMessage(error.message||"Signup failed. Please try again.");
+  }finally{
+    button.disabled=false;
+    button.textContent="Create account";
+  }
 });
 
 document.getElementById("forgotBtn").addEventListener("click",async()=>{
-clearMessage();
+  const email=document.getElementById("loginEmail").value.trim().toLowerCase();
 
-const email=document.getElementById("loginEmail").value.trim().toLowerCase();
-const button=document.getElementById("forgotBtn");
+  if(!email||!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)){
+    showMessage("Enter your email address first, then click Forgot password.");
+    return;
+  }
 
-if(!email||!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)){
-showMessage("Enter your email address first, then click Forgot password.");
-return;
-}
+  const button=document.getElementById("forgotBtn");
+  button.disabled=true;
+  button.textContent="Sending...";
 
-button.disabled=true;
-button.textContent="Sending...";
+  try{
+    const response=await fetch(`${API_BASE_URL}/api/auth/forgot-password`,{
+      method:"POST",
+      headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({email})
+    });
 
-try{
-const response=await fetch(`${API_BASE_URL}/api/auth/forgot-password`,{
-method:"POST",
-headers:{"Content-Type":"application/json"},
-body:JSON.stringify({email})
+    const data=await response.json().catch(()=>({}));
+
+    if(!response.ok||!data.success){
+      throw new Error(
+        data.error||
+        "Unable to process password recovery."
+      );
+    }
+
+    showMessage(
+      data.message||
+      "If an account exists for this email, a password reset email will be sent.",
+      "success"
+    );
+  }catch(error){
+    showMessage(error.message||"Unable to process password recovery.");
+  }finally{
+    button.disabled=false;
+    button.textContent="Forgot password?";
+  }
 });
 
-const data=await response.json().catch(()=>({}));
+resetForm.addEventListener("submit",async event=>{
+  event.preventDefault();
+  clearMessage();
 
-if(!response.ok||!data.success){
-throw new Error(data.error||data.message||"Unable to process password recovery.");
-}
+  if(!recoveryAccessToken){
+    showMessage("Your password reset session is missing or has expired. Please request a new password reset email.");
+    return;
+  }
 
-showMessage(data.message||"If the account exists, a password reset email has been sent.","success");
-}catch(error){
-showMessage(error.message||"Unable to process password recovery.");
-}finally{
-button.disabled=false;
-button.textContent="Forgot password?";
-}
+  const newPassword=document.getElementById("newPassword").value;
+  const confirmNewPassword=document.getElementById("confirmNewPassword").value;
+  const button=document.getElementById("resetSubmit");
+
+  if(newPassword.length<8){
+    showMessage("Password must be at least 8 characters.");
+    return;
+  }
+
+  if(newPassword!==confirmNewPassword){
+    showMessage("Passwords do not match.");
+    return;
+  }
+
+  button.disabled=true;
+  button.textContent="Updating password...";
+
+  try{
+    const response=await fetch(`${API_BASE_URL}/api/auth/reset-password`,{
+      method:"POST",
+      headers:{
+        "Content-Type":"application/json",
+        "Authorization":`Bearer ${recoveryAccessToken}`
+      },
+      body:JSON.stringify({password:newPassword})
+    });
+
+    const data=await response.json().catch(()=>({}));
+
+    if(!response.ok||!data.success){
+      throw new Error(
+        data.error||
+        "Unable to update your password."
+      );
+    }
+
+    localStorage.removeItem("abn_access_token");
+    localStorage.removeItem("abn_refresh_token");
+    localStorage.removeItem("abn_user");
+
+    recoveryAccessToken=null;
+
+    showMessage(
+      "Your password has been updated successfully. You can now sign in with your new password.",
+      "success"
+    );
+
+    resetBack.classList.add("show");
+  }catch(error){
+    showMessage(
+      error.message||
+      "Unable to update your password."
+    );
+  }finally{
+    button.disabled=false;
+    button.textContent="Update password";
+  }
+});
+
+document.getElementById("backToLogin").addEventListener("click",()=>{
+  window.location.href=window.location.origin+window.location.pathname;
 });
 
 const themeBtn=document.getElementById("themeBtn");
 
 function updateThemeButton(){
-themeBtn.textContent=document.body.classList.contains("dark")?"☀":"☾";
+  themeBtn.textContent=document.body.classList.contains("dark")?"☀":"☾";
 }
 
 const savedTheme=localStorage.getItem("abn_theme");
 
 if(savedTheme==="dark"){
-document.body.classList.add("dark");
+  document.body.classList.add("dark");
 }
 
 updateThemeButton();
 
 themeBtn.addEventListener("click",()=>{
-document.body.classList.toggle("dark");
+  document.body.classList.toggle("dark");
 
-localStorage.setItem(
-"abn_theme",
-document.body.classList.contains("dark")?"dark":"light"
-);
+  localStorage.setItem(
+    "abn_theme",
+    document.body.classList.contains("dark")?"dark":"light"
+  );
 
-updateThemeButton();
+  updateThemeButton();
 });
+
+parseRecoverySession();
 </script>
 </body>
 </html>
