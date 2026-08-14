@@ -7,11 +7,6 @@ import requests
 from flask import Flask, request, jsonify, g
 from flask_cors import CORS
 
-
-# ============================================================
-# APPLICATION
-# ============================================================
-
 app = Flask(__name__)
 
 logging.basicConfig(
@@ -21,11 +16,6 @@ logging.basicConfig(
 
 logger = logging.getLogger(__name__)
 
-
-# ============================================================
-# ENVIRONMENT
-# ============================================================
-
 SUPABASE_URL = os.getenv("SUPABASE_URL")
 SUPABASE_ANON_KEY = os.getenv("SUPABASE_ANON_KEY")
 SUPABASE_SERVICE_ROLE_KEY = os.getenv("SUPABASE_SERVICE_ROLE_KEY")
@@ -34,36 +24,26 @@ FRONTEND_URL = os.getenv(
     "https://abn-kappa.vercel.app"
 ).rstrip("/")
 
-
 def validate_environment():
     missing = []
 
     if not SUPABASE_URL:
         missing.append("SUPABASE_URL")
-
     if not SUPABASE_ANON_KEY:
         missing.append("SUPABASE_ANON_KEY")
-
     if not SUPABASE_SERVICE_ROLE_KEY:
         missing.append("SUPABASE_SERVICE_ROLE_KEY")
 
     if missing:
         raise RuntimeError(
-            "Missing required environment variables: "
-            + ", ".join(missing)
+            "Missing required environment variables: " + ", ".join(missing)
         )
-
 
 validate_environment()
 
 SUPABASE_URL = SUPABASE_URL.rstrip("/")
 SUPABASE_AUTH_URL = f"{SUPABASE_URL}/auth/v1"
 SUPABASE_REST_URL = f"{SUPABASE_URL}/rest/v1"
-
-
-# ============================================================
-# CORS
-# ============================================================
 
 CORS(
     app,
@@ -78,42 +58,23 @@ CORS(
     supports_credentials=True
 )
 
-
-# ============================================================
-# HTTP CLIENT
-# ============================================================
-
 http = requests.Session()
-
 http.headers.update({
     "Accept": "application/json"
 })
-
-
-# ============================================================
-# VALIDATION CONSTANTS
-# ============================================================
 
 MAX_NAME_LENGTH = 100
 MAX_USERNAME_LENGTH = 50
 MAX_EMAIL_LENGTH = 320
 MIN_PASSWORD_LENGTH = 8
 
-
-# ============================================================
-# RESPONSE HELPERS
-# ============================================================
-
 def json_error(message, status_code=400, **extra):
     payload = {
         "success": False,
         "error": message
     }
-
     payload.update(extra)
-
     return jsonify(payload), status_code
-
 
 def json_success(data=None, status_code=200):
     payload = {
@@ -125,26 +86,15 @@ def json_success(data=None, status_code=200):
 
     return jsonify(payload), status_code
 
-
-# ============================================================
-# REQUEST HELPERS
-# ============================================================
-
 def get_json_body():
     if not request.is_json:
         return None
 
     try:
         data = request.get_json(silent=True)
-
-        if not isinstance(data, dict):
-            return None
-
-        return data
-
+        return data if isinstance(data, dict) else None
     except Exception:
         return None
-
 
 def clean_string(value, max_length=None):
     if value is None:
@@ -157,38 +107,23 @@ def clean_string(value, max_length=None):
 
     return value
 
-
-# ============================================================
-# VALIDATION
-# ============================================================
-
 def validate_email(email):
-    if not email:
+    if not email or len(email) > MAX_EMAIL_LENGTH:
         return False
 
-    if len(email) > MAX_EMAIL_LENGTH:
-        return False
-
-    pattern = r"^[^@\s]+@[^@\s]+\.[^@\s]+$"
-
-    return re.match(pattern, email) is not None
-
+    return re.match(
+        r"^[^@\s]+@[^@\s]+\.[^@\s]+$",
+        email
+    ) is not None
 
 def validate_password(password):
-    if not password:
-        return False
-
-    return len(password) >= MIN_PASSWORD_LENGTH
-
+    return isinstance(password, str) and len(password) >= MIN_PASSWORD_LENGTH
 
 def validate_username(username):
     if not username:
         return False
 
-    if len(username) < 3:
-        return False
-
-    if len(username) > MAX_USERNAME_LENGTH:
+    if len(username) < 3 or len(username) > MAX_USERNAME_LENGTH:
         return False
 
     return re.match(
@@ -196,18 +131,11 @@ def validate_username(username):
         username
     ) is not None
 
-
 def normalize_email(email):
     return email.strip().lower()
 
-
 def normalize_username(username):
     return username.strip().lower()
-
-
-# ============================================================
-# SUPABASE HEADERS
-# ============================================================
 
 def supabase_auth_headers(api_key=None, access_token=None):
     if api_key is None:
@@ -224,11 +152,7 @@ def supabase_auth_headers(api_key=None, access_token=None):
 
     return headers
 
-
-def supabase_database_headers(
-    use_service_role=True,
-    access_token=None
-):
+def supabase_database_headers(use_service_role=True, access_token=None):
     key = (
         SUPABASE_SERVICE_ROLE_KEY
         if use_service_role
@@ -248,21 +172,12 @@ def supabase_database_headers(
 
     return headers
 
-
-# ============================================================
-# SUPABASE ERROR EXTRACTION
-# ============================================================
-
 def extract_supabase_error(response):
     try:
         data = response.json()
     except Exception:
         text = response.text.strip()
-
-        if text:
-            return text[:500]
-
-        return "Supabase request failed."
+        return text[:500] if text else "Supabase request failed."
 
     if isinstance(data, dict):
         for key in (
@@ -273,16 +188,28 @@ def extract_supabase_error(response):
             "error_code"
         ):
             value = data.get(key)
-
             if value:
                 return str(value)
 
     return "Supabase request failed."
 
+def build_session(data):
+    if not isinstance(data, dict):
+        return None
 
-# ============================================================
-# SUPABASE SIGNUP
-# ============================================================
+    access_token = data.get("access_token")
+    refresh_token = data.get("refresh_token")
+
+    if not access_token:
+        return None
+
+    return {
+        "access_token": access_token,
+        "refresh_token": refresh_token,
+        "expires_in": data.get("expires_in"),
+        "expires_at": data.get("expires_at"),
+        "token_type": data.get("token_type", "bearer")
+    }
 
 def supabase_signup(email, password, user_metadata):
     url = f"{SUPABASE_AUTH_URL}/signup"
@@ -308,14 +235,12 @@ def supabase_signup(email, password, user_metadata):
             json=payload,
             timeout=20
         )
-
     except requests.RequestException as exc:
         logger.error(
             "SUPABASE SIGNUP CONNECTION ERROR | email=%s | error=%s",
             email,
             exc
         )
-
         return None, "Unable to connect to authentication service."
 
     try:
@@ -343,11 +268,6 @@ def supabase_signup(email, password, user_metadata):
 
     return response_data, None
 
-
-# ============================================================
-# SUPABASE LOGIN
-# ============================================================
-
 def supabase_login(email, password):
     url = f"{SUPABASE_AUTH_URL}/token"
 
@@ -368,15 +288,18 @@ def supabase_login(email, password):
             json=payload,
             timeout=20
         )
-
     except requests.RequestException as exc:
         logger.error(
             "SUPABASE LOGIN CONNECTION ERROR | email=%s | error=%s",
             email,
             exc
         )
-
         return None, "Unable to connect to authentication service."
+
+    try:
+        data = response.json()
+    except Exception:
+        data = {}
 
     if response.status_code != 200:
         error = extract_supabase_error(response)
@@ -390,13 +313,8 @@ def supabase_login(email, password):
 
         return None, error
 
-    try:
-        data = response.json()
-    except Exception:
-        return None, "Invalid response from authentication service."
-
     user = data.get("user")
-    session = data.get("session")
+    session = build_session(data)
 
     logger.info(
         "SUPABASE LOGIN SUCCESS | email=%s | user_id=%s | session=%s",
@@ -405,12 +323,11 @@ def supabase_login(email, password):
         bool(session)
     )
 
-    return data, None
-
-
-# ============================================================
-# SUPABASE USER VERIFICATION
-# ============================================================
+    return {
+        "user": user,
+        "session": session,
+        "raw": data
+    }, None
 
 def supabase_get_user(access_token):
     url = f"{SUPABASE_AUTH_URL}/user"
@@ -423,13 +340,11 @@ def supabase_get_user(access_token):
             ),
             timeout=20
         )
-
     except requests.RequestException as exc:
         logger.error(
             "SUPABASE USER VERIFICATION ERROR | error=%s",
             exc
         )
-
         return None, "Unable to verify authentication."
 
     if response.status_code != 200:
@@ -439,11 +354,6 @@ def supabase_get_user(access_token):
         return response.json(), None
     except Exception:
         return None, "Invalid authentication response."
-
-
-# ============================================================
-# SUPABASE LOGOUT
-# ============================================================
 
 def supabase_logout(access_token):
     url = f"{SUPABASE_AUTH_URL}/logout"
@@ -456,13 +366,11 @@ def supabase_logout(access_token):
             ),
             timeout=20
         )
-
     except requests.RequestException as exc:
         logger.error(
             "SUPABASE LOGOUT ERROR | error=%s",
             exc
         )
-
         return False, "Unable to contact authentication service."
 
     if response.status_code not in (200, 204):
@@ -470,17 +378,7 @@ def supabase_logout(access_token):
 
     return True, None
 
-
-# ============================================================
-# PROFILE CREATION
-# ============================================================
-
-def create_profile(
-    user_id,
-    email,
-    full_name,
-    username
-):
+def create_profile(user_id, email, full_name, username):
     url = f"{SUPABASE_REST_URL}/profiles"
 
     payload = {
@@ -499,14 +397,12 @@ def create_profile(
             json=payload,
             timeout=20
         )
-
     except requests.RequestException as exc:
         logger.error(
             "PROFILE DATABASE CONNECTION ERROR | user_id=%s | error=%s",
             user_id,
             exc
         )
-
         return None, "Unable to save user profile."
 
     if response.status_code not in (200, 201):
@@ -531,28 +427,15 @@ def create_profile(
             return data, None
 
         return None, "Invalid database response."
-
     except Exception:
         return None, "Invalid database response."
-
-
-# ============================================================
-# PROFILE LOOKUP
-# ============================================================
 
 def get_profile(user_id):
     url = f"{SUPABASE_REST_URL}/profiles"
 
     params = {
         "id": f"eq.{user_id}",
-        "select": (
-            "id,"
-            "email,"
-            "full_name,"
-            "username,"
-            "created_at,"
-            "updated_at"
-        )
+        "select": "id,email,full_name,username,created_at,updated_at"
     }
 
     try:
@@ -564,14 +447,12 @@ def get_profile(user_id):
             ),
             timeout=20
         )
-
     except requests.RequestException as exc:
         logger.error(
             "PROFILE LOOKUP ERROR | user_id=%s | error=%s",
             user_id,
             exc
         )
-
         return None, "Unable to retrieve profile."
 
     if response.status_code != 200:
@@ -593,14 +474,8 @@ def get_profile(user_id):
             return None, None
 
         return data[0], None
-
     except Exception:
         return None, "Invalid database response."
-
-
-# ============================================================
-# USERNAME CHECK
-# ============================================================
 
 def check_username_exists(username):
     url = f"{SUPABASE_REST_URL}/profiles"
@@ -620,14 +495,12 @@ def check_username_exists(username):
             ),
             timeout=20
         )
-
     except requests.RequestException as exc:
         logger.error(
             "USERNAME LOOKUP ERROR | username=%s | error=%s",
             username,
             exc
         )
-
         return None, "Unable to check username."
 
     if response.status_code != 200:
@@ -643,23 +516,13 @@ def check_username_exists(username):
 
     try:
         data = response.json()
-
-        return (
-            isinstance(data, list) and len(data) > 0
-        ), None
-
+        return bool(isinstance(data, list) and data), None
     except Exception:
         return None, "Invalid database response."
-
-
-# ============================================================
-# AUTHENTICATION DECORATOR
-# ============================================================
 
 def require_authentication(function):
     @wraps(function)
     def decorated(*args, **kwargs):
-
         authorization = request.headers.get(
             "Authorization",
             ""
@@ -685,9 +548,7 @@ def require_authentication(function):
                 401
             )
 
-        user, error = supabase_get_user(
-            access_token
-        )
+        user, error = supabase_get_user(access_token)
 
         if error or not user:
             return json_error(
@@ -702,11 +563,6 @@ def require_authentication(function):
 
     return decorated
 
-
-# ============================================================
-# HOME
-# ============================================================
-
 @app.route("/", methods=["GET"])
 def home():
     return jsonify({
@@ -715,11 +571,6 @@ def home():
         "status": "running"
     })
 
-
-# ============================================================
-# HEALTH
-# ============================================================
-
 @app.route("/api/health", methods=["GET"])
 def health():
     return jsonify({
@@ -727,14 +578,8 @@ def health():
         "status": "healthy"
     })
 
-
-# ============================================================
-# SIGNUP
-# ============================================================
-
 @app.route("/api/auth/signup", methods=["POST"])
 def signup():
-
     data = get_json_body()
 
     if not data:
@@ -761,19 +606,9 @@ def signup():
         )
     )
 
-    # --------------------------------------------------------
-    # VALIDATION
-    # --------------------------------------------------------
-
     if not validate_email(email):
         return json_error(
             "Please provide a valid email address.",
-            400
-        )
-
-    if not isinstance(password, str):
-        return json_error(
-            "Password is invalid.",
             400
         )
 
@@ -791,18 +626,11 @@ def signup():
 
     if not validate_username(username):
         return json_error(
-            "Username must be 3-50 characters and contain only "
-            "letters, numbers, underscores or periods.",
+            "Username must be 3-50 characters and contain only letters, numbers, underscores or periods.",
             400
         )
 
-    # --------------------------------------------------------
-    # USERNAME AVAILABILITY
-    # --------------------------------------------------------
-
-    username_exists, username_error = check_username_exists(
-        username
-    )
+    username_exists, username_error = check_username_exists(username)
 
     if username_error:
         return json_error(
@@ -816,10 +644,6 @@ def signup():
             409
         )
 
-    # --------------------------------------------------------
-    # SUPABASE SIGNUP
-    # --------------------------------------------------------
-
     user_metadata = {
         "full_name": full_name,
         "username": username
@@ -832,31 +656,24 @@ def signup():
     )
 
     if auth_error:
-
         lower_error = auth_error.lower()
 
         if (
             "already registered" in lower_error
             or "already exists" in lower_error
             or "already been registered" in lower_error
+            or "user already registered" in lower_error
         ):
             return json_error(
                 "An account with this email already exists.",
                 409
             )
 
-        if (
-            "email not confirmed" in lower_error
-            or "email confirmation" in lower_error
-        ):
-            return json_success({
-                "verification_required": True,
-                "message": (
-                    "Your account exists but your email has not been "
-                    "verified yet. Please check your email for the "
-                    "authentication link."
-                )
-            }, 200)
+        if "rate limit" in lower_error:
+            return json_error(
+                "Too many signup emails have been requested recently. Please wait a while before trying again.",
+                429
+            )
 
         logger.error(
             "SIGNUP FAILED | email=%s | error=%s",
@@ -869,7 +686,7 @@ def signup():
             400
         )
 
-    if auth_data is None:
+    if not auth_data:
         logger.error(
             "SIGNUP FAILED | Supabase returned no response data | email=%s",
             email
@@ -880,41 +697,11 @@ def signup():
             500
         )
 
-    # --------------------------------------------------------
-    # IMPORTANT:
-    #
-    # When Supabase email confirmation is enabled, signup can
-    # legitimately return:
-    #
-    #   user    = null
-    #   session = null
-    #
-    # That is NOT a signup failure.
-    #
-    # The account creation request succeeded and Supabase is
-    # waiting for the user to verify their email.
-    # --------------------------------------------------------
-
     user = auth_data.get("user")
-    session = auth_data.get("session")
-
-    # --------------------------------------------------------
-    # EMAIL VERIFICATION PENDING
-    # --------------------------------------------------------
+    session = build_session(auth_data)
 
     if not session:
-
-        # If Supabase supplied a user, we can optionally create
-        # the application profile immediately.
-        #
-        # If it did not supply one, we simply wait for the user
-        # to verify their email and subsequently log in.
-        #
-        # This is intentional and prevents the frontend from
-        # displaying a false signup error.
-
         if user and user.get("id"):
-
             user_id = user.get("id")
 
             profile, profile_error = create_profile(
@@ -936,33 +723,16 @@ def signup():
             email
         )
 
-        response_data = {
+        return json_success({
             "verification_required": True,
-            "message": (
-                "Account created successfully. "
-                "Please check your email for the authentication link "
-                "to verify your account. After verification, return "
-                "here and sign in."
-            ),
+            "message": "Account created successfully. Please check your email for the authentication link to verify your account. After verification, return here and sign in.",
             "user": None,
             "session": None
-        }
+        }, 201)
 
-        return json_success(
-            response_data,
-            201
-        )
-
-    # --------------------------------------------------------
-    # IMMEDIATE SESSION
-    #
-    # This occurs when email confirmation is disabled.
-    # --------------------------------------------------------
-
-    if not user:
-
+    if not user or not user.get("id"):
         logger.error(
-            "SIGNUP FAILED | Supabase returned a session without a user | email=%s",
+            "SIGNUP FAILED | Supabase returned authentication tokens without a user | email=%s",
             email
         )
 
@@ -973,18 +743,6 @@ def signup():
 
     user_id = user.get("id")
 
-    if not user_id:
-
-        logger.error(
-            "SIGNUP FAILED | Supabase returned user without ID | email=%s",
-            email
-        )
-
-        return json_error(
-            "Account creation returned no user ID.",
-            500
-        )
-
     profile, profile_error = create_profile(
         user_id=user_id,
         email=email,
@@ -993,7 +751,6 @@ def signup():
     )
 
     if profile_error:
-
         logger.error(
             "PROFILE CREATION FAILED | user_id=%s | error=%s",
             user_id,
@@ -1005,7 +762,13 @@ def signup():
             500
         )
 
-    response_data = {
+    logger.info(
+        "SIGNUP SUCCESS | user_id=%s | email=%s | session=True",
+        user_id,
+        email
+    )
+
+    return json_success({
         "message": "Account created and authenticated successfully.",
         "verification_required": False,
         "user": {
@@ -1014,34 +777,11 @@ def signup():
             "full_name": full_name,
             "username": username
         },
-        "session": {
-            "access_token": session.get("access_token"),
-            "refresh_token": session.get("refresh_token"),
-            "expires_in": session.get("expires_in"),
-            "expires_at": session.get("expires_at"),
-            "token_type": session.get("token_type")
-        }
-    }
-
-    logger.info(
-        "SIGNUP SUCCESS | user_id=%s | email=%s | session=True",
-        user_id,
-        email
-    )
-
-    return json_success(
-        response_data,
-        201
-    )
-
-
-# ============================================================
-# LOGIN
-# ============================================================
+        "session": session
+    }, 201)
 
 @app.route("/api/auth/login", methods=["POST"])
 def login():
-
     data = get_json_body()
 
     if not data:
@@ -1074,12 +814,7 @@ def login():
     )
 
     if auth_error:
-
         lower_error = auth_error.lower()
-
-        # ----------------------------------------------------
-        # Explicitly handle unverified email.
-        # ----------------------------------------------------
 
         if (
             "email not confirmed" in lower_error
@@ -1088,8 +823,7 @@ def login():
             or "email confirmation" in lower_error
         ):
             return json_error(
-                "Please check your email and click the authentication "
-                "link to verify your account before signing in.",
+                "Please check your email and click the authentication link to verify your account before signing in.",
                 403,
                 verification_required=True
             )
@@ -1114,10 +848,23 @@ def login():
     user = auth_data.get("user")
     session = auth_data.get("session")
 
-    if not user or not session:
+    if not user:
         return json_error(
-            "Login was unsuccessful. No authentication session was returned.",
-            401
+            "Authentication succeeded but no user was returned.",
+            500
+        )
+
+    if not session:
+        logger.warning(
+            "LOGIN REQUIRES EMAIL VERIFICATION | email=%s | user_id=%s",
+            email,
+            user.get("id")
+        )
+
+        return json_error(
+            "Please check your email and click the authentication link to verify your account before signing in.",
+            403,
+            verification_required=True
         )
 
     user_id = user.get("id")
@@ -1128,21 +875,9 @@ def login():
             500
         )
 
-    profile, profile_error = get_profile(
-        user_id
-    )
-
-    # --------------------------------------------------------
-    # PROFILE MAY NOT EXIST FOR A LEGACY USER.
-    #
-    # Do not reject an otherwise valid Supabase login merely
-    # because the profile row is missing.
-    #
-    # Attempt to reconstruct it from auth metadata.
-    # --------------------------------------------------------
+    profile, profile_error = get_profile(user_id)
 
     if profile_error:
-
         logger.error(
             "PROFILE RETRIEVAL FAILED | user_id=%s | error=%s",
             user_id,
@@ -1154,13 +889,12 @@ def login():
             500
         )
 
+    metadata = user.get(
+        "user_metadata",
+        {}
+    )
+
     if not profile:
-
-        metadata = user.get(
-            "user_metadata",
-            {}
-        )
-
         metadata_full_name = clean_string(
             metadata.get("full_name"),
             MAX_NAME_LENGTH
@@ -1177,7 +911,6 @@ def login():
             metadata_full_name
             and validate_username(metadata_username)
         ):
-
             profile, create_error = create_profile(
                 user_id=user_id,
                 email=user.get("email") or email,
@@ -1186,7 +919,6 @@ def login():
             )
 
             if create_error:
-
                 logger.warning(
                     "PROFILE AUTO-CREATION FAILED | user_id=%s | error=%s",
                     user_id,
@@ -1194,15 +926,6 @@ def login():
                 )
 
         if not profile:
-
-            # ------------------------------------------------
-            # Authentication is still valid.
-            #
-            # Return the auth user instead of incorrectly
-            # converting successful authentication into HTTP
-            # 500.
-            # ------------------------------------------------
-
             profile = {
                 "id": user_id,
                 "email": user.get("email") or email,
@@ -1220,22 +943,22 @@ def login():
         "message": "Login successful.",
         "verification_required": False,
         "user": {
-            "id": user.get("id"),
+            "id": user_id,
             "email": user.get("email") or email,
-            "full_name": profile.get("full_name"),
-            "username": profile.get("username")
+            "full_name": profile.get("full_name", ""),
+            "username": profile.get("username", "")
         },
         "session": {
             "access_token": session.get("access_token"),
             "refresh_token": session.get("refresh_token"),
             "expires_in": session.get("expires_in"),
             "expires_at": session.get("expires_at"),
-            "token_type": session.get("token_type")
+            "token_type": session.get("token_type", "bearer")
         }
     }
 
     logger.info(
-        "SUCCESSFUL LOGIN | user_id=%s | email=%s",
+        "SUCCESSFUL LOGIN | user_id=%s | email=%s | session=True",
         user_id,
         email
     )
@@ -1245,21 +968,13 @@ def login():
         200
     )
 
-
-# ============================================================
-# CURRENT USER
-# ============================================================
-
 @app.route("/api/auth/me", methods=["GET"])
 @require_authentication
 def current_user():
-
     user = g.user
     user_id = user.get("id")
 
-    profile, profile_error = get_profile(
-        user_id
-    )
+    profile, profile_error = get_profile(user_id)
 
     if profile_error:
         return json_error(
@@ -1291,23 +1006,14 @@ def current_user():
         "profile": profile
     })
 
-
-# ============================================================
-# LOGOUT
-# ============================================================
-
 @app.route("/api/auth/logout", methods=["POST"])
 @require_authentication
 def logout():
-
-    access_token = g.access_token
-
     success, error = supabase_logout(
-        access_token
+        g.access_token
     )
 
     if not success:
-
         logger.error(
             "LOGOUT FAILED | error=%s",
             error
@@ -1322,14 +1028,8 @@ def logout():
         "message": "Logged out successfully."
     })
 
-
-# ============================================================
-# FORGOT PASSWORD
-# ============================================================
-
 @app.route("/api/auth/forgot-password", methods=["POST"])
 def forgot_password():
-
     data = get_json_body()
 
     if not data:
@@ -1364,9 +1064,7 @@ def forgot_password():
             json=payload,
             timeout=20
         )
-
     except requests.RequestException as exc:
-
         logger.error(
             "PASSWORD RECOVERY CONNECTION ERROR | error=%s",
             exc
@@ -1378,31 +1076,18 @@ def forgot_password():
         )
 
     if response.status_code not in (200, 201, 204):
-
         logger.warning(
             "PASSWORD RECOVERY REQUEST FAILED | status=%s | error=%s",
             response.status_code,
             extract_supabase_error(response)
         )
 
-    # Deliberately generic response.
-    # This prevents account enumeration.
-
     return json_success({
-        "message": (
-            "If an account exists for this email, "
-            "a password reset email will be sent."
-        )
+        "message": "If an account exists for this email, a password reset email will be sent."
     })
-
-
-# ============================================================
-# REFRESH SESSION
-# ============================================================
 
 @app.route("/api/auth/refresh", methods=["POST"])
 def refresh_session():
-
     data = get_json_body()
 
     if not data:
@@ -1439,9 +1124,7 @@ def refresh_session():
             json=payload,
             timeout=20
         )
-
     except requests.RequestException as exc:
-
         logger.error(
             "TOKEN REFRESH CONNECTION ERROR | error=%s",
             exc
@@ -1453,7 +1136,6 @@ def refresh_session():
         )
 
     if response.status_code != 200:
-
         error = extract_supabase_error(response)
 
         logger.warning(
@@ -1467,28 +1149,25 @@ def refresh_session():
         )
 
     try:
-        session = response.json()
+        data = response.json()
     except Exception:
         return json_error(
             "Invalid response from authentication service.",
             500
         )
 
+    session = build_session(data)
+
+    if not session:
+        return json_error(
+            "Authentication service returned an invalid session.",
+            401
+        )
+
     return json_success({
         "message": "Session refreshed successfully.",
-        "session": {
-            "access_token": session.get("access_token"),
-            "refresh_token": session.get("refresh_token"),
-            "expires_in": session.get("expires_in"),
-            "expires_at": session.get("expires_at"),
-            "token_type": session.get("token_type")
-        }
+        "session": session
     })
-
-
-# ============================================================
-# ERROR HANDLERS
-# ============================================================
 
 @app.errorhandler(400)
 def bad_request(error):
@@ -1497,14 +1176,12 @@ def bad_request(error):
         400
     )
 
-
 @app.errorhandler(404)
 def not_found(error):
     return json_error(
         "Endpoint not found.",
         404
     )
-
 
 @app.errorhandler(405)
 def method_not_allowed(error):
@@ -1513,10 +1190,8 @@ def method_not_allowed(error):
         405
     )
 
-
 @app.errorhandler(500)
 def internal_server_error(error):
-
     logger.exception(
         "UNHANDLED SERVER ERROR | error=%s",
         error
@@ -1527,13 +1202,7 @@ def internal_server_error(error):
         500
     )
 
-
-# ============================================================
-# START SERVER
-# ============================================================
-
 if __name__ == "__main__":
-
     port = int(
         os.getenv("PORT", "5000")
     )
