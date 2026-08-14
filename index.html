@@ -1492,27 +1492,25 @@
           // IMMEDIATE AUTHENTICATION
           // --------------------------------------------------
 
-          if (
-            data.session &&
-            data.session.access_token
-          ) {
+         if (
+  data.session &&
+  data.session.access_token
+) {
+  showMessage(
+    "Account created successfully. Redirecting...",
+    "success"
+  );
 
-            showMessage(
-              "Account created successfully. Redirecting...",
-              "success"
-            );
+  setTimeout(
+    () => {
+      window.location.href =
+        "https://www.abnwebtech.online/";
+    },
+    700
+  );
 
-
-            setTimeout(
-              () => {
-                window.location.href =
-                  "/dashboard.html";
-              },
-              700
-            );
-
-            return;
-          }
+  return;
+}
 
 
           // --------------------------------------------------
